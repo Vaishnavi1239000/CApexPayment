@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "capex-payment-client-side-solution",
+    "id": "825f0e00-70b2-4cc2-a2c8-a86c283ef63d",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.20.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "capex-payment description"
+      },
+      "longDescription": {
+        "default": "capex-payment description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "capex-payment Feature",
+        "description": "The feature that activates elements of the capex-payment solution.",
+        "id": "7879b96d-60b9-4044-bf3d-c19e3668533b",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/capex-payment.sppkg"
+  }
+}
