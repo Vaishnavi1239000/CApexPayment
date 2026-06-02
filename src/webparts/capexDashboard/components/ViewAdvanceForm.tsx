@@ -8,7 +8,7 @@ import {
   PrincipalType,
 } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import { IPeoplePickerContext } from "@pnp/spfx-controls-react/lib/PeoplePicker";
-//import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import logo from "../assets/sona-comstarlogo.png";
 interface IVendor {
   Id: number;

@@ -9,7 +9,7 @@ import {
 } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import { IPeoplePickerContext } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import logo from "../assets/sona-comstarlogo.png";
-//import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap/dist/css/bootstrap.min.css";
 interface IVendor {
   Id: number;
   VendorCode: string;
@@ -22,6 +22,12 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   // =========================
   // STATES
   // =========================
+   const today = new Date();
+  const localDate: string = new Date(
+  today.getTime() - today.getTimezoneOffset() * 60000
+)
+  .toISOString()
+  .split("T")[0];
 
   const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
   const [vendors, setVendors] = useState<IVendor[]>([]);
@@ -101,11 +107,18 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     }
   };
   const getVendors = async () => {
+  try {
     const data = await sp.web.lists
       .getByTitle("VendorMaster")
-      .items.select("Id", "VendorCode", "VendorName")();
-    void setVendors(data);
-  };
+      .items.select("Id", "VendorCode", "VendorName", "Status")
+      .filter("Status eq 'Active'")()
+;
+
+    setVendors(data);
+  } catch (error) {
+    console.error("Vendor fetch error:", error);
+  }
+};
 
   const getLoggedInUser = async () => {
     try {
@@ -389,7 +402,10 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     if (!poDate) {
       errors.push("Please select PO Date");
     }
-
+ if (poDate > localDate) {
+      errors.push("PO date cannot be a future date");
+      // return;
+    }
     if (!poTerms) {
       errors.push("Please enter PO Terms");
     }
@@ -416,9 +432,9 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     }
 
     // 🔥 Final Payment Validation
-    if (!finalPayment) {
-      errors.push("Please select Final Payment option");
-    }
+    // if (!finalPayment) {
+    //   errors.push("Please select Final Payment option");
+    // }
 
     if (finalPayment && !installationDetails) {
       errors.push("Please enter Installation Details");
@@ -478,7 +494,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         // Comment: remarks,
         Date: new Date().toISOString(),
       });
-      const currentApproverId = formData.CurrentApproverId || null;
+      //const currentApproverId = formData.CurrentApproverId || null;
       await sp.web.lists.getByTitle("CapexPayment").items.add({
         Title: formData.CapexId,
         CapexId: formData.CapexId,
@@ -528,7 +544,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         StatusFlow: "Pending for Approver",
         Status: "Pending for Approver",
         ApprovalMatrix: JSON.stringify(existingFlow),
-        CurrentApproverId: currentApproverId,
+      //  CurrentApproverId: currentApproverId,
         WorkFlowHistory: JSON.stringify(history),
       });
 
@@ -830,6 +846,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                     <input
                       type="date"
                       value={poDate}
+                       max={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setPoDate(e.target.value)}
                       className="form-control"
                     />
@@ -974,7 +991,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                             {previousAdvances.length === 0 ? (
                               <tr>
                                 <td colSpan={7} style={{ textAlign: "center" }}>
-                                  No Data
+                                 No previous advances available
                                 </td>
                               </tr>
                             ) : (

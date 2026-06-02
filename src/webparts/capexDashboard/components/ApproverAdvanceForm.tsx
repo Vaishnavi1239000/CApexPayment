@@ -1,5 +1,5 @@
 import * as React from "react";
-//import "./advanced.scss";
+import "./advanced.scss";
 import { spfi } from "@pnp/sp";
 import { SPFx } from "@pnp/sp/presets/all";
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import {
   PeoplePicker,
   PrincipalType,
 } from "@pnp/spfx-controls-react/lib/PeoplePicker";
-//import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import logo from "../assets/sona-comstarlogo.png";
 
 interface IProps {

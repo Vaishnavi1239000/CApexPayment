@@ -1,5 +1,5 @@
 import * as React from "react";
-//import "./advanced.scss";
+import "./advanced.scss";
 import { spfi } from "@pnp/sp";
 import { SPFx } from "@pnp/sp/presets/all";
 import {

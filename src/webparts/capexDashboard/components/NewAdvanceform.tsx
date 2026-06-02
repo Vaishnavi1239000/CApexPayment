@@ -9,8 +9,8 @@ import {
   PrincipalType,
 } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import { IPeoplePickerContext } from "@pnp/spfx-controls-react/lib/PeoplePicker";
+import "bootstrap/dist/css/bootstrap.min.css";
 
-//import "bootstrap/dist/css/bootstrap.min.css";
 import logo from "../assets/sona-comstarlogo.png";
 
 interface IVendor {
@@ -23,6 +23,12 @@ const NewAdvanceform = ({ context }: any) => {
   // const history = useHistory();
 
   const sp = spfi().using(SPFx(context));
+  const today = new Date();
+  const localDate: string = new Date(
+  today.getTime() - today.getTimezoneOffset() * 60000
+)
+  .toISOString()
+  .split("T")[0];
   const [selectedVendorCode, setSelectedVendorCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraftSaving, setIsDraftSaving] = useState(false);
@@ -150,12 +156,18 @@ const NewAdvanceform = ({ context }: any) => {
     }
   };
   const getVendors = async () => {
+  try {
     const data = await sp.web.lists
       .getByTitle("VendorMaster")
-      .items.select("Id", "VendorCode", "VendorName")(); // ✅ Id required
+      .items.select("Id", "VendorCode", "VendorName", "Status")
+      .filter("Status eq 'Active'")()
+;
 
-    void setVendors(data);
-  };
+    setVendors(data);
+  } catch (error) {
+    console.error("Vendor fetch error:", error);
+  }
+};
 
   const getFinancialYear = () => {
     const today = new Date();
@@ -335,6 +347,11 @@ const NewAdvanceform = ({ context }: any) => {
       errors.push("Please select PO Date");
     }
 
+    if (poDate > localDate) {
+      errors.push("PO date cannot be a future date");
+      // return;
+    }
+
     if (!poTerms) {
       errors.push("Please enter PO Terms");
     }
@@ -361,9 +378,7 @@ const NewAdvanceform = ({ context }: any) => {
     }
 
     // 🔥 Final Payment Validation
-    if (!finalPayment) {
-      errors.push("Please select Final Payment option");
-    }
+   
 
     if (finalPayment === "Yes" && !installationDetails) {
       errors.push("Please enter Installation Details");
@@ -389,6 +404,7 @@ if (
   };
 
   const handleSubmit = async () => {
+    debugger;
     if (isSubmitting) return;
 
   setIsSubmitting(true);
@@ -417,7 +433,7 @@ if (
       // const ensuredUser = await sp.web.ensureUser(userEmail);
       const flow = await buildApprovalFlow();
 
-      const currentApprover = flow.length > 0 ? flow[0].Id : null;
+     // const currentApprover = flow.length > 0 ? flow[0].Id : null;
 
       // 🔥 workflow history
       const wfHistory = [
@@ -477,7 +493,7 @@ if (
         StatusFlow: "Pending for Approver",
         Status: "Pending for Approver",
         ApprovalMatrix: JSON.stringify(flow),
-        CurrentApproverId: currentApprover,
+        //CurrentApproverId: currentApprover,
         WorkflowHistory: JSON.stringify(wfHistory),
       });
 
@@ -628,6 +644,7 @@ if (
             ) : (
               <div className="displayWF">
                 <ul className="approval-flow">
+                  
                   {approvalMatrix.map((a, index) => (
                     <li
                       key={index}
@@ -778,6 +795,7 @@ if (
                       type="date"
                       value={poDate}
                       className="form-control"
+                       max={new Date().toISOString().split("T")[0]} 
                       onChange={(e) => setPoDate(e.target.value)}
                     />
                   </div>
@@ -922,7 +940,7 @@ if (
                             {previousAdvances.length === 0 ? (
                               <tr>
                                 <td colSpan={7} style={{ textAlign: "center" }}>
-                                  No Data
+                                 No previous advances available
                                 </td>
                               </tr>
                             ) : (
