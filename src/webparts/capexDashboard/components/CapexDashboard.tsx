@@ -8,6 +8,8 @@ import ApLogo from '../assets/ApDashboard.png';
 import UserLogo from '../assets/UserDashboard.png';
 import ApproverLogo from '../assets/ApproverDashboard.png';
 
+import "../assets/bootstrap/css/bootstrap.css";
+
 export default function CapexDashboard(props: ICapexDashboardProps) {
 
   const [page, setPage] = React.useState<string>("home");

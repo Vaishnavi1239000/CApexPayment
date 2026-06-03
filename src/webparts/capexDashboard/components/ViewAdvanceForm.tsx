@@ -62,29 +62,29 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
     msGraphClientFactory: context.msGraphClientFactory,
     spHttpClient: context.spHttpClient,
   };
-const getAttachments = async (capexId: string) => {
-  try {
-    if (!capexId) return;
+  const getAttachments = async (capexId: string) => {
+    try {
+      if (!capexId) return;
 
-    // ✅ IMPORTANT FIX
-    const safeCapexId = capexId.replace(/\//g, "_");
+      // ✅ IMPORTANT FIX
+      const safeCapexId = capexId.replace(/\//g, "_");
 
-    const folderPath = `/sites/SonaFinance/CapexPaymentDocs/${safeCapexId}`;
+      const folderPath = `/sites/SonaFinance/CapexPaymentDocs/${safeCapexId}`;
 
-    console.log("Correct Folder Path:", folderPath);
+      console.log("Correct Folder Path:", folderPath);
 
-    const files = await sp.web
-      .getFolderByServerRelativePath(folderPath)
-      .files();
+      const files = await sp.web
+        .getFolderByServerRelativePath(folderPath)
+        .files();
 
-    console.log("Files:", files);
+      console.log("Files:", files);
 
-    setAttachments(files || []);
-  } catch (error) {
-    console.log("Attachment fetch error:", error);
-    setAttachments([]);
-  }
-};
+      setAttachments(files || []);
+    } catch (error) {
+      console.log("Attachment fetch error:", error);
+      setAttachments([]);
+    }
+  };
 
   // const uploadFiles = async () => {
   //     if (!formData?.CapexID || selectedFiles.length === 0) return;
@@ -235,24 +235,23 @@ const getAttachments = async (capexId: string) => {
               <h1> Advance Payment (View) </h1>
             </div>
             {approvalMatrix.length === 0 ? (
-              <p></p>
+              <></>
             ) : (
               <div className="displayWF">
                 <ul className="approval-flow">
                   {approvalMatrix.map((a, index) => (
                     <li
                       key={index}
-                      className={`approval-step ${
-                        a.Status === "In Progress"
-                          ? "active"
-                          : a.Status === "Approved"
-                            ? "approved"
-                            : a.Status === "Rejected"
-                              ? "rejected"
-                              : a.Status === "Send Back"
-                                ? "sendback"
-                                : ""
-                      }`}
+                      className={`approval-step ${a.Status === "In Progress"
+                        ? "active"
+                        : a.Status === "Approved"
+                          ? "approved"
+                          : a.Status === "Rejected"
+                            ? "rejected"
+                            : a.Status === "Send Back"
+                              ? "sendback"
+                              : ""
+                        }`}
                     >
                       {a.Role} - {a.Name}
                     </li>
@@ -352,7 +351,7 @@ const getAttachments = async (capexId: string) => {
                 <div className="row mb-20">
                   <div className="col-md-4">
                     <label className="font">Vendor Code</label>
-                    <select
+                    {/* <select
                       value={selectedVendorId ?? ""}
                       disabled={true}
                       onChange={(e) => {
@@ -368,7 +367,10 @@ const getAttachments = async (capexId: string) => {
                           {v.VendorCode}
                         </option>
                       ))}
-                    </select>
+                    </select> */}
+
+                    <label className="fonttext">{selectedVendorId}</label>
+
                   </div>
                   <div className="col-md-4">
                     <label className="font">Vendor Name</label> : &nbsp;&nbsp;
@@ -426,56 +428,54 @@ const getAttachments = async (capexId: string) => {
                   </div>
                 </div>
               </div>
-
+              <div className="heading1" style={{ marginTop: "10px" }}>
+                <label>Final Payment Details</label>
+              </div>
               <div className="main-formcontainer">
                 <div className="row mb-20">
-                  <div className="heading1" style={{ marginTop: "10px" }}>
-                    <label>Final Payment Details</label>
-                  </div>
-
-                  <div className="main-formcontainer">
-                    <div className="row mb-20">
-                      <div className="col-md-4">
-                        <label className="font">Final Payment Against PO</label>{" "}
-                        : &nbsp;&nbsp;
-                        <label className="fonttext">{finalPayment}</label>
-                      </div>
-                    </div>
-
-                    {finalPayment === "Yes" && (
-                      <div className="row mb-20">
-                        <div className="col-md-6">
-                          <label className="font">Installation Details</label> :
-                          &nbsp;&nbsp;
-                          <label className="fonttext">
-                            {installationDetails}
-                          </label>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   <div className="col-md-4">
+                    <label className="font">Final Payment Against PO</label>{" "}
+                    : &nbsp;&nbsp;
+                    <label className="fonttext">{finalPayment}</label>
+                  </div>
+                </div>
+
+                {finalPayment === "Yes" && (
+                  <div className="row mb-20">
+                    <div className="col-md-6">
+                      <label className="font">Installation Details</label> :
+                      &nbsp;&nbsp;
+                      <label className="fonttext">
+                        {installationDetails}
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="main-formcontainer" style={{ marginTop: "10px" }}>
+                <div className="row mb-20">
+                  <div className="col-md-6">
                     <label className="font">Voucher Date</label> : &nbsp;&nbsp;
                     <label className="fonttext">{voucherDate}</label>
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-md-6">
                     <label className="font">Voucher Number</label> :
                     &nbsp;&nbsp;
                     <label className="fonttext">{VouchingNumber}</label>
                   </div>
                 </div>
                 <div className="row mb-20">
-                  <div className="col-md-4">
+                  <div className="col-md-6">
                     <label className="font">UTR Date</label> : &nbsp;&nbsp;
                     <label className="fonttext">{UTRDate}</label>
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-md-6">
                     <label className="font">UTR Number</label> : &nbsp;&nbsp;
                     <label className="fonttext">{UTRNumber}</label>
                   </div>
                 </div>
               </div>
+
               <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Upload Document</label>
               </div>

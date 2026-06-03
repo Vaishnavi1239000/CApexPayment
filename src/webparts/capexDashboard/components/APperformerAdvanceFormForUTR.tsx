@@ -434,111 +434,37 @@ const getLoggedInUser = async () => {
               <div className="heading1">
                 <label>Vendor & PO Details</label>
               </div>
-              <div className='main-formcontainer'>
-                <div className='row mb-20'>
-                 <div className="col-md-4">
-                    <label className="font">Vendor Code</label>
-
-                    <input
-                      type="text"
-                      value={itemData?.VendorCode || ""}
-                      className="form-control readonly"
-                      readOnly
-                    />
-                  </div>
-                  
-                  <div className="col-md-4">
-                    <label>Vendor Name</label>
-                    <input value={itemData.VendorName || ""} className="form-control readonly" />
-                  </div>
-                  <div className="col-md-4">
-                    <label>PO Number</label>
-                    <input value={itemData.PONumber || ""} className="form-control readonly" />
-                  </div>
-                </div>
-                <div className='row mb-20'>
-                  <div className="col-md-4">
-                    <label className="font">PO Date</label>
-                    <input value={itemData.PODate ? new Date(itemData.PODate).toLocaleDateString("en-GB") : ""} className="font-control readonly" />
-                  </div>
-                  <div className="col-md-4">
-                    <label className="font">PO Terms</label>
-                    <input value={itemData.POAdvanceTerms || ""} className="font-control readonly" />
-                  </div>
-                  <div className="col-md-4">
-                    <label className="font">PO Amount</label>
-                    <input value={itemData.POAmtGST || ""} className="font-control readonly" />
-                  </div>
-                </div>
-                  <div className="heading1" style={{ marginTop: "10px" }}>
-                <label>MRN & Payment Details</label>
-              </div>
-
-              <div className="main-formcontainer">
+               <div className="main-formcontainer">
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">MRN Number</label> : &nbsp;&nbsp;
-                    <label className="fonttext">{itemData?.mrnNumber}</label>
+                    <label className="font"> Vendor Code </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.VendorCode}</label>
                   </div>
-
                   <div className="col-md-4">
-                    <label className="font">MRN Date</label> : &nbsp;&nbsp;
-                     <label className="fonttext">
-                      {itemData?.mrnDate
-                        ? new Date(itemData.mrnDate).toLocaleDateString("en-GB")
-                        : ""}
-                    </label>
+                    <label className="font">Vendor Name </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.VendorName}</label>
                   </div>
-
                   <div className="col-md-4">
-                    <label className="font">MRN Amount</label> : &nbsp;&nbsp;
-                    <label className="fonttext">{itemData?.mrnAmount}</label>
+                    <label className="font">PO Number </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.PONumber}</label>
                   </div>
                 </div>
-
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">Requested Amount</label> :
-                    &nbsp;&nbsp;
-                    <label className="fonttext">{itemData?.requestedAmount}</label>
+                    <label className="font">PO Date </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.PODate ? new Date(itemData.PODate).toLocaleDateString("en-GB",) : ""}</label>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="font">PO Terms </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.POAdvanceTerms}</label>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="font">PO Amount </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.POAmtGST}</label>
                   </div>
                 </div>
               </div>
-
-              <div className="main-formcontainer">
-                <div className="row mb-20">
-                  <div className="heading1" style={{ marginTop: "10px" }}>
-                    <label>Final Payment Details</label>
-                  </div>
-
-                  <div className="main-formcontainer">
-                    <div className="row mb-20">
-                      <div className="col-md-4">
-                        <label className="font">Final Payment Against PO</label>{" "}
-                        : &nbsp;&nbsp;
-                        <label className="fonttext">
-                          {itemData?.FinalPaymentAgainstPO ? "Yes" : "No"}
-                        </label>
-                      </div>
-                    </div>
-
-                    {itemData?.FinalPaymentAgainstPO && (
-                      <div className="row mb-20">
-                        <div className="col-md-6">
-                          <label className="font">Installation Details</label> :
-                          &nbsp;&nbsp;
-                          <label className="fonttext">
-                            {itemData?.InstallationDetails}
-                          </label>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              </div>
-             
-             
+              -
               <div className="heading1">
                 <label>Approver Action</label>
               </div>
@@ -547,7 +473,6 @@ const getLoggedInUser = async () => {
                   <div className="col-md-4">
                     <label className="font">Approver Remarks</label>
                      <input value={itemData.ApproverRemarks || ""} className="font-control readonly" />
-                   
                   </div>
                   <div className="col-md-4">
                     <label className="font">Voucher Date</label>

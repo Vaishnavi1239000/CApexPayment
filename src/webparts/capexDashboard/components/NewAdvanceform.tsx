@@ -387,19 +387,19 @@ const NewAdvanceform = ({ context }: any) => {
     if (!attachments || attachments.length === 0) {
       errors.push("Please upload attachment");
     }
-if (!requestedAmount) {
-  errors.push("Please enter Requested Amount");
-}
+    if (!requestedAmount) {
+      errors.push("Please enter Requested Amount");
+    }
 
-if (
-  requestedAmount &&
-  mrnAmount &&
-  Number(requestedAmount) > Number(mrnAmount)
-) {
-  errors.push(
-    "Requested Amount for Payment should not be greater than MRN Amount (GST)"
-  );
-}
+    if (
+      requestedAmount &&
+      mrnAmount &&
+      Number(requestedAmount) > Number(mrnAmount)
+    ) {
+      errors.push(
+        "Requested Amount for Payment should not be greater than MRN Amount (GST)"
+      );
+    }
     return errors;
   };
 
@@ -407,9 +407,9 @@ if (
     debugger;
     if (isSubmitting) return;
 
-  setIsSubmitting(true);
+    setIsSubmitting(true);
 
-  try {
+    try {
       const errors = validateForm();
 
       if (errors.length > 0) {
@@ -506,22 +506,22 @@ if (
       // 🔥 REDIRECT
       window.location.href =
         "https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=User";
-     } catch (error: any) {
-    console.error("FULL ERROR:", error);
-    console.error("SP ERROR:", error?.data?.responseBody);
-    alert(error?.data?.responseBody || "Error while saving ❌");
-  }
-  finally {
-    setIsSubmitting(false);
-  }
-};
+    } catch (error: any) {
+      console.error("FULL ERROR:", error);
+      console.error("SP ERROR:", error?.data?.responseBody);
+      alert(error?.data?.responseBody || "Error while saving ❌");
+    }
+    finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handledraft = async () => {
-   if (isDraftSaving) return;
+    if (isDraftSaving) return;
 
-  setIsDraftSaving(true);
+    setIsDraftSaving(true);
 
-  try {
+    try {
       const capexId = await generateCapexId();
 
       let ensuredUserId: number | null = null;
@@ -612,14 +612,14 @@ if (
 
       window.location.href =
         "https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=User";
-     } catch (error) {
-    console.error("ERROR:", error);
-    alert("Error while saving ❌");
-  }
-  finally {
-    setIsDraftSaving(false);
-  }
-};
+    } catch (error) {
+      console.error("ERROR:", error);
+      alert("Error while saving ❌");
+    }
+    finally {
+      setIsDraftSaving(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!context) return;
@@ -746,7 +746,7 @@ if (
               <div className="main-formcontainer">
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">Vendor Code</label><span className="required">*</span>
+                    <label className="font">Vendor Code&nbsp; <span className="required">*</span> </label>
                     <select
                       value={selectedVendorId || ""}
                       onChange={(e) => {
@@ -780,7 +780,7 @@ if (
                     />
                   </div>
                   <div className="col-md-4">
-                    <label className="font">PO Number</label><span className="required">*</span>
+                    <label className="font">PO Number&nbsp; <span className="required">*</span> </label>
                     <input
                       value={poNumber}
                       className="form-control"
@@ -790,7 +790,7 @@ if (
                 </div>
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">PO Date</label><span className="required">*</span>
+                    <label className="font">PO Date&nbsp; <span className="required">*</span> </label>
                     <input
                       type="date"
                       value={poDate}
@@ -799,9 +799,8 @@ if (
                       onChange={(e) => setPoDate(e.target.value)}
                     />
                   </div>
-
                   <div className="col-md-4">
-                    <label className="font">PO Amount (GST)</label><span className="required">*</span>
+                    <label className="font">PO Amount (GST)&nbsp; <span className="required">*</span> </label>
                     <input
                       value={poAmount}
                       className="form-control"
@@ -810,10 +809,8 @@ if (
                       }
                     />
                   </div>
-                </div>
-                <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">PO Payment Terms </label><span className="required">*</span>
+                    <label className="font">PO Payment Terms &nbsp; <span className="required">*</span> </label>
                     <input
                       value={poTerms}
                       className="form-control"
@@ -828,16 +825,15 @@ if (
               <div className="main-formcontainer">
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label>MRN Number</label><span className="required">*</span>
+                    <label className="font">MRN Number&nbsp; <span className="required">*</span> </label>
                     <input
                       value={mrnNumber}
                       onChange={(e) => setMrnNumber(e.target.value)}
                       className="form-control"
                     />
                   </div>
-
                   <div className="col-md-4">
-                    <label>MRN Date</label><span className="required">*</span>
+                    <label className="font">MRN Date&nbsp; <span className="required">*</span> </label>
                     <input
                       type="date"
                       value={mrnDate}
@@ -845,9 +841,8 @@ if (
                       className="form-control"
                     />
                   </div>
-
                   <div className="col-md-4">
-                    <label>MRN Amount (GST)</label><span className="required">*</span>
+                    <label className="font">MRN Amount (GST)&nbsp; <span className="required">*</span> </label>
                     <input
                       value={mrnAmount}
                       onChange={(e) =>
@@ -856,59 +851,62 @@ if (
                       className="form-control"
                     />
                   </div>
-                  <div className="row mb-20">
-                    <div className="col-md-4">
-                      <label>Requested Amount for Payment </label><span className="required">*</span>
-                      <input
-                        value={requestedAmount}
-                        onChange={(e) =>
-                          handleNumberChange(e.target.value, setRequestedAmount)
-                        }
-                        className="form-control"
-                      />
-                    </div>
+                </div>
+                <div className="row mb-20">
+                  <div className="col-md-4">
+                    <label className="font">Requested Amount for Payment &nbsp; <span className="required">*</span> </label>
+                    <input
+                      value={requestedAmount}
+                      onChange={(e) =>
+                        handleNumberChange(e.target.value, setRequestedAmount)
+                      }
+                      className="form-control"
+                    />
                   </div>
                 </div>
               </div>
-
-              <div className="main-formcontainer">
+              <div className="main-formcontainer" style={{ marginTop: "10px" }}>
                 <div className="row mb-20">
-                  <div className="row mb-20">
-                    <div className="col-md-6">
-                      <label>
-                        {" "}
-                        Whether this is the Final Payment against the PO
-                      </label><span className="required">*</span>
-                      <br />
-                      <input
-                        type="radio"
-                        value="Yes"
-                        checked={finalPayment === "Yes"}
-                        onChange={(e) => setFinalPayment(e.target.value)}
-                      />{" "}
-                      Yes
-                      <input
-                        type="radio"
-                        value="No"
-                        checked={finalPayment === "No"}
-                        onChange={(e) => setFinalPayment(e.target.value)}
-                      />{" "}
-                      No
+                  <div className='col-md-4'>
+                    <label className='font fontblock'>Whether this is the Final Payment against the PO &nbsp; <span className="required">*</span> </label>
+                    <div className='radioalign'>
+                      <label className='fonttext'>
+                        <div>
+                          <input
+                            type="radio"
+                            value="Yes"
+                            checked={finalPayment === "Yes"}
+                            onChange={(e) => setFinalPayment(e.target.value)}
+                          />
+                        </div>
+                        &nbsp;
+                        <div>Yes</div>
+                      </label>
+                      &nbsp;&nbsp;
+                      <label className='fonttext '>
+                        <div>
+                          <input
+                            type="radio"
+                            value="No"
+                            checked={finalPayment === "No"}
+                            onChange={(e) => setFinalPayment(e.target.value)}
+                          />
+                        </div>
+                        &nbsp;
+                        <div>No</div>
+                      </label>
                     </div>
                   </div>
-
                   {finalPayment === "Yes" && (
-                    <div className="row mb-20">
-                      <div className="col-md-6">
-                        <label>Installation Details</label><span className="required">*</span>
-                        <textarea
-                          value={installationDetails}
-                          onChange={(e) =>
-                            setInstallationDetails(e.target.value)
-                          }
-                          className="form-control"
-                        />
-                      </div>
+                    <div className="col-md-4">
+                      <label className="font">Installation Details&nbsp; <span className="required">*</span> </label>
+                      <textarea
+                        value={installationDetails}
+                        onChange={(e) =>
+                          setInstallationDetails(e.target.value)
+                        }
+                        className="form-control"
+                      />
                     </div>
                   )}
                 </div>
@@ -949,7 +947,7 @@ if (
                                   const pending = Math.max(
                                     0,
                                     Number(item.RequestAdvanceAmount || 0) -
-                                      Number(item.PaidAmount || 0),
+                                    Number(item.PaidAmount || 0),
                                   );
                                   return (
                                     <tr key={index}>
@@ -959,16 +957,16 @@ if (
                                       <td>
                                         {item.Created
                                           ? new Date(
-                                              item.Created,
-                                            ).toLocaleDateString()
+                                            item.Created,
+                                          ).toLocaleDateString()
                                           : ""}
                                       </td>
 
                                       <td>
                                         {item.VoucherDate
                                           ? new Date(
-                                              item.VoucherDate,
-                                            ).toLocaleDateString()
+                                            item.VoucherDate,
+                                          ).toLocaleDateString()
                                           : ""}
                                       </td>
 
@@ -987,80 +985,64 @@ if (
                   </div>
                 </div>
               </div>
+              <div className="main-formcontainer" style={{ marginTop: "10px" }}>
+                <div className="row mb-20">
+                  <div className="col-md-4">
+                    <label className="font">Attach &nbsp; <span className="required">*</span> </label>
+                    <input type="file" multiple style={{height :"34px", padding: "3px"}}
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setAttachments((prev) => [...prev,
+                          ...Array.from(e.target.files),]);
+                        }
+                      }} />
 
-              <div className="col-md-4">
-                <div className="col-md-4">
-                  <label className="font">Attach</label><span className="required">*</span>
+                    {/* 🔥 Show selected files */}
+                    {attachments.length > 0 && (
+                      <ul style={{ marginTop: "10px" }}>
+                        {attachments.map((file, index) => (
+                          <li key={index}>
+                            {file.name}
 
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        setAttachments((prev) => [
-                          ...prev,
-                          ...Array.from(e.target.files),
-                        ]);
-                      }
-                    }}
-                  />
-
-                  {/* 🔥 Show selected files */}
-                  {attachments.length > 0 && (
-                    <ul style={{ marginTop: "10px" }}>
-                      {attachments.map((file, index) => (
-                        <li key={index}>
-                          {file.name}
-
-                          {/* 🔥 Remove button */}
-                          <button
-                            type="button"
-                            style={{
-                              marginLeft: "10px",
-                              color: "red",
-                              cursor: "pointer",
-                            }}
-                            onClick={() => handleRemoveFile(index)}
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                            {/* 🔥 Remove button */}
+                            <button
+                              type="button"
+                              style={{
+                                marginLeft: "10px",
+                                color: "red",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => handleRemoveFile(index)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "5px",
-                  marginBottom: "1rem",
-                  marginTop: "1rem",
-                }}
-              >
-                <a
-                  onClick={!isSubmitting ? handleSubmit : undefined}
-                  className={`submit-btn ${isSubmitting ? "disabled-btn" : ""}`}
-                >
-                  {isSubmitting ? "Submitting..." : "Submit"}
-                </a>
-
-                <a
-                  onClick={!isDraftSaving ? handledraft : undefined}
-                  className={`Rework-btn ${isDraftSaving ? "disabled-btn" : ""}`}
-                >
-                  {isDraftSaving ? "Saving..." : "Save as Draft"}
-                </a>
-                <a href="#" onClick={handleExit} className="reset-btn">
-                  Exit
-                </a>
+              <div className='row my-3' >
+                <div className='col-md-12'>
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
+                    <a onClick={!isSubmitting ? handleSubmit : undefined} className={`submit-btn ${isSubmitting ? "disabled-btn" : ""}`}>
+                      {isSubmitting ? "Submitting..." : "Submit"}
+                    </a>
+                    <a onClick={!isDraftSaving ? handledraft : undefined} className={`Rework-btn ${isDraftSaving ? "disabled-btn" : ""}`}>
+                      {isDraftSaving ? "Saving..." : "Save as Draft"}
+                    </a>
+                    <a href="#" onClick={handleExit} className="reset-btn">
+                      Exit
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

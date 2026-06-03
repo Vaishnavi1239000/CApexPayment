@@ -221,175 +221,175 @@ const ApproverAdvanceForm: React.FC<IProps> = ({
 
     // Workflow History
     // Workflow History
-if (formData.WorkflowHistory) {
-  try {
+    if (formData.WorkflowHistory) {
+      try {
 
-    const history =
-      typeof formData.WorkflowHistory === "string"
-        ? JSON.parse(formData.WorkflowHistory)
-        : formData.WorkflowHistory || [];
+        const history =
+          typeof formData.WorkflowHistory === "string"
+            ? JSON.parse(formData.WorkflowHistory)
+            : formData.WorkflowHistory || [];
 
-    setWorkflowHistory(history);
+        setWorkflowHistory(history);
 
-    console.log("🔥 Workflow History:", history);
+        console.log("🔥 Workflow History:", history);
 
-  } catch (e) {
+      } catch (e) {
 
-    console.log("WFHistory parse error", e);
+        console.log("WFHistory parse error", e);
 
-    setWorkflowHistory([]);
-  }
-}
+        setWorkflowHistory([]);
+      }
+    }
   }, [formData]);
 
   // ✅ Approve
-const handleApprove = async () => {
-  try {
-
-    if (!approverRemarks) {
-      alert("Please enter Remarks");
-      return;
-    }
-
-    // =========================
-    // 🔥 PARSE MATRIX
-    // =========================
-    let flow: any[] = [];
-
+  const handleApprove = async () => {
     try {
-      flow =
-        typeof itemData.ApprovalMatrix === "string"
-          ? JSON.parse(itemData.ApprovalMatrix)
-          : itemData.ApprovalMatrix || [];
-    } catch {
-      flow = [];
-    }
 
-    if (!Array.isArray(flow) || flow.length === 0) {
-      alert("Approval Matrix empty");
-      return;
-    }
-
-    // =========================
-    // 🔥 FIND CURRENT APPROVER
-    // =========================
-    const currentIndex = flow.findIndex(
-      (x: any) =>
-        x.Status === "In Progress" ||
-        x.Status === "Pending"
-    );
-
-    if (currentIndex === -1) {
-      alert("No pending approver found");
-      return;
-    }
-
-    // =========================
-    // 🔥 CURRENT APPROVED
-    // =========================
-    flow[currentIndex].Status = "Approved";
-
-    // =========================
-    // 🔥 NEXT APPROVER
-    // =========================
-    
-    const nextIndex = currentIndex + 1;
-
-    let nextApproverId: number | null = null;
-    let nextStatus = "Approved";
-    let pendingAt = "Completed";
-
-    if (nextIndex < flow.length) {
-
-      flow[nextIndex].Status = "Pending";
-
-      nextApproverId = flow[nextIndex].Id;
+      if (!approverRemarks) {
+        alert("Please enter Remarks");
+        return;
+      }
 
       // =========================
-// 🔥 DYNAMIC STATUS
-// =========================
-const nextRole = flow[nextIndex].Role;
+      // 🔥 PARSE MATRIX
+      // =========================
+      let flow: any[] = [];
 
-if (nextRole === "RM") {
+      try {
+        flow =
+          typeof itemData.ApprovalMatrix === "string"
+            ? JSON.parse(itemData.ApprovalMatrix)
+            : itemData.ApprovalMatrix || [];
+      } catch {
+        flow = [];
+      }
 
-  nextStatus = "Pending for Approval";
+      if (!Array.isArray(flow) || flow.length === 0) {
+        alert("Approval Matrix empty");
+        return;
+      }
 
-} else if (nextRole === "HOD") {
+      // =========================
+      // 🔥 FIND CURRENT APPROVER
+      // =========================
+      const currentIndex = flow.findIndex(
+        (x: any) =>
+          x.Status === "In Progress" ||
+          x.Status === "Pending"
+      );
 
-  nextStatus = "Pending for Approval";
+      if (currentIndex === -1) {
+        alert("No pending approver found");
+        return;
+      }
 
-}  else if (nextRole === "Performer") {
+      // =========================
+      // 🔥 CURRENT APPROVED
+      // =========================
+      flow[currentIndex].Status = "Approved";
 
-  nextStatus = "Pending for PF Approver";
+      // =========================
+      // 🔥 NEXT APPROVER
+      // =========================
 
-} 
+      const nextIndex = currentIndex + 1;
 
-      pendingAt = `Pending at ${flow[nextIndex].Role}`;
-    }
+      let nextApproverId: number | null = null;
+      let nextStatus = "Approved";
+      let pendingAt = "Completed";
 
-    // =========================
-    // 🔥 WORKFLOW HISTORY
-    // =========================
-    let history: any[] = [];
+      if (nextIndex < flow.length) {
 
-    try {
-      history =
-        typeof itemData.WorkflowHistory === "string"
-          ? JSON.parse(itemData.WorkflowHistory)
-          : itemData.WorkflowHistory || [];
-    } catch {
-      history = [];
-    }
+        flow[nextIndex].Status = "Pending";
 
-    history.push({
-      CurrentApprover:
-        context.pageContext.user.displayName,
+        nextApproverId = flow[nextIndex].Id;
 
-      ActionTaken: "Approved",
+        // =========================
+        // 🔥 DYNAMIC STATUS
+        // =========================
+        const nextRole = flow[nextIndex].Role;
 
-      Comment: approverRemarks,
+        if (nextRole === "RM") {
 
-      Date: new Date().toISOString(),
+          nextStatus = "Pending for Approval";
 
-      CurrentStatus: pendingAt
-    });
+        } else if (nextRole === "HOD") {
 
-    console.log("🔥 UPDATED MATRIX:", flow);
-    console.log("🔥 UPDATED HISTORY:", history);
+          nextStatus = "Pending for Approval";
 
-    // =========================
-    // 🔥 UPDATE SHAREPOINT
-    // =========================
-    await sp.web.lists
-      .getByTitle("CapexPayment")
-      .items.getById(itemData.ID)
-      .update({
+        } else if (nextRole === "Performer") {
 
-        ApproverRemarks: approverRemarks,
+          nextStatus = "Pending for PF Approver";
 
-        Status: nextStatus,
+        }
 
-        PendingAt: pendingAt,
+        pendingAt = `Pending at ${flow[nextIndex].Role}`;
+      }
 
-        CurrentApproverId: nextApproverId,
+      // =========================
+      // 🔥 WORKFLOW HISTORY
+      // =========================
+      let history: any[] = [];
 
-        ApprovalMatrix: JSON.stringify(flow),
+      try {
+        history =
+          typeof itemData.WorkflowHistory === "string"
+            ? JSON.parse(itemData.WorkflowHistory)
+            : itemData.WorkflowHistory || [];
+      } catch {
+        history = [];
+      }
 
-        WorkflowHistory: JSON.stringify(history)
+      history.push({
+        CurrentApprover:
+          context.pageContext.user.displayName,
+
+        ActionTaken: "Approved",
+
+        Comment: approverRemarks,
+
+        Date: new Date().toISOString(),
+
+        CurrentStatus: pendingAt
       });
 
-    alert("Approved successfully ✅");
+      console.log("🔥 UPDATED MATRIX:", flow);
+      console.log("🔥 UPDATED HISTORY:", history);
 
-    window.location.href =
-      "https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=Approver";
+      // =========================
+      // 🔥 UPDATE SHAREPOINT
+      // =========================
+      await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(itemData.ID)
+        .update({
 
-  } catch (error) {
+          ApproverRemarks: approverRemarks,
 
-    console.error("Approve error:", error);
+          Status: nextStatus,
 
-    alert("Error ❌");
-  }
-};
+          PendingAt: pendingAt,
+
+          CurrentApproverId: nextApproverId,
+
+          ApprovalMatrix: JSON.stringify(flow),
+
+          WorkflowHistory: JSON.stringify(history)
+        });
+
+      alert("Approved successfully ✅");
+
+      window.location.href =
+        "https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=Approver";
+
+    } catch (error) {
+
+      console.error("Approve error:", error);
+
+      alert("Error ❌");
+    }
+  };
 
   // ✅ Sent Back
   const handleSendBack = async () => {
@@ -483,15 +483,14 @@ if (nextRole === "RM") {
                   {approvalMatrix.map((a, index) => (
                     <li
                       key={index}
-                      className={`approval-step ${
-                        a.Status === "In Progress"
+                      className={`approval-step ${a.Status === "In Progress"
                           ? "active"
                           : a.Status === "Approved"
                             ? "approved"
                             : a.Status === "Rejected"
                               ? "rejected"
                               : ""
-                      }`}
+                        }`}
                     >
                       {a.Role} - {a.Name}
                     </li>
@@ -500,7 +499,7 @@ if (nextRole === "RM") {
               </div>
             )}
             <div className="borderedbox">
-              <div className="heading1">
+              <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Requestor Information</label>
               </div>
               <div className="main-formcontainer">
@@ -577,74 +576,47 @@ if (nextRole === "RM") {
                   </div>
                 </div>
               </div>
-              <div className="heading1">
+              <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Vendor & PO Details</label>
               </div>
               <div className="main-formcontainer">
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">Vendor Code</label>
-
-                    <input
-                      type="text"
-                      value={itemData?.VendorCode || ""}
-                      className="form-control readonly"
-                      readOnly
-                    />
+                    <label className="font"> Vendor Code </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.VendorCode}</label>
                   </div>
                   <div className="col-md-4">
-                    <label>Vendor Name</label>
-                    <input
-                      value={itemData.VendorName || ""}
-                      className="form-control readonly"
-                    />
+                    <label className="font">Vendor Name </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.VendorName}</label>
                   </div>
                   <div className="col-md-4">
-                    <label>PO Number</label>
-                    <input
-                      value={itemData.PONumber || ""}
-                      className="form-control readonly"
-                    />
+                    <label className="font">PO Number </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.PONumber}</label>
                   </div>
                 </div>
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">PO Date</label>
-                    <input
-                      value={
-                        itemData.PODate
-                          ? new Date(itemData.PODate).toLocaleDateString(
-                              "en-GB",
-                            )
-                          : ""
-                      }
-                      className="font-control readonly"
-                    />
+                    <label className="font">PO Date </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.PODate ? new Date(itemData.PODate).toLocaleDateString("en-GB",) : ""}</label>
                   </div>
                   <div className="col-md-4">
-                    <label className="font">PO Terms</label>
-                    <input
-                      value={itemData.POAdvanceTerms || ""}
-                      className="font-control readonly"
-                    />
+                    <label className="font">PO Terms </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.POAdvanceTerms}</label>
                   </div>
                   <div className="col-md-4">
-                    <label className="font">PO Amount</label>
-                    <input
-                      value={itemData.POAmtGST || ""}
-                      className="font-control readonly"
-                    />
+                    <label className="font">PO Amount </label> : &nbsp;&nbsp;
+                    <label className="fonttext "> {itemData.POAmtGST}</label>
                   </div>
                 </div>
               </div>
               <div className="heading1" style={{ marginTop: "10px" }}>
-                <label>MRN & Payment Details</label>
+                <label>MRN & Payment Details </label> : &nbsp;&nbsp;
               </div>
 
               <div className="main-formcontainer">
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">MRN Number</label> : &nbsp;&nbsp;
+                    <label className="font">MRN Number </label> : &nbsp;&nbsp;
                     <label className="fonttext">{itemData?.mrnNumber}</label>
                   </div>
 
@@ -707,13 +679,40 @@ if (nextRole === "RM") {
                 </div>
               </div>
 
-              <div className="heading1">
+              <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Workflow History</label>
               </div>
               <div className="main-formcontainer">
                 <div className="row mb-20">
                   <div className="col-md-12">
-                    {workflowHistory.length === 0 ? (
+                    <div className='Workflowbox'>
+                      {workflowHistory && workflowHistory.length > 0 ? (
+                        <table className="workflow-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ padding: '8px', textAlign: 'left' }}>Action Date</th>
+                              <th style={{ padding: '8px', textAlign: 'left' }}>Action By</th>
+                              <th style={{ padding: '8px', textAlign: 'left' }}>Action Taken</th>
+                              <th style={{ padding: '8px', textAlign: 'left' }}>Comment</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {workflowHistory.map((h: any, idx: number) => (
+                              <tr key={idx}>
+                                <td style={{ padding: '8px' }}>{h.Date ? new Date(h.Date).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).replace(",", "") : ""}</td>
+                                <td style={{ padding: '8px' }}>{h.CurrentApprover || ''}</td>
+                                <td style={{ padding: '8px' }}>{h.ActionTaken || ''}</td>
+                                <td style={{ padding: '8px' }}>{h.Comment || ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p>No workflow history</p>
+                      )}
+                    </div>
+                    
+                    {/* {workflowHistory.length === 0 ? (
                       <p>No history available</p>
                     ) : (
                       <div className="workflow-history">
@@ -736,11 +735,11 @@ if (nextRole === "RM") {
                           </div>
                         ))}
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>
-              <div className="heading1">
+              <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Approver Action</label>
               </div>
               <div className="main-formcontainer">
@@ -755,7 +754,7 @@ if (nextRole === "RM") {
                   </div>
                 </div>
               </div>
-              <div className="heading1">
+              <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Upload Document</label>
               </div>
               <div className="main-formcontainer">

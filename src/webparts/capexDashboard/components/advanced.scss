@@ -135,8 +135,8 @@ button {
 
 
 .approval-step.approved {
-   background-color: #008000;
-   color: #fff;
+  background-color: #008000;
+  color: #fff;
 }
 
 .approval-step.rejected {
@@ -219,18 +219,44 @@ button {
 
 label {
   font-weight: 600;
+  margin: 0px !important;
 }
 
 .main-formcontainer {
   border: 1px solid #a9a9a9;
   box-shadow: 0 1px 1px rgba(9, 30, 66, .25), 0 0 1px 1px rgba(9, 30, 66, .13);
-  margin: 0 !important;
+  margin: 0px;
   padding: 10px 15px;
   width: 100%;
 }
 
 .font {
   padding: 5px 0;
+}
+
+.fontblock {
+  display: block;
+}
+
+.Workflowbox table th {
+  background-color: #000;
+  color: #fff;
+  border: 1px solid #ccc;
+}
+
+.Workflowbox table td {
+  border: 1px solid #ccc;
+}
+
+.radioalign {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.radioalign label {
+  display: flex;
+  align-items: center;
 }
 
 .fonttext {
@@ -266,7 +292,7 @@ label {
 .submit-btn {
   padding: 6px 16px;
   background: green;
-  color: rgb(255, 255, 255);
+  color: rgb(255, 255, 255) !important;
   font-size: 14px;
   border: 1px solid green;
   border-radius: 5px;
@@ -277,7 +303,7 @@ label {
 .Rework-btn {
   padding: 6px 16px;
   background: #f4840a;
-  color: rgb(255, 255, 255);
+  color: rgb(255, 255, 255) !important;
   font-size: 14px;
   border: 1px solid #f4840a;
   border-radius: 5px;
@@ -289,7 +315,7 @@ label {
   padding: 8px 16px;
   background: #ff0000;
   border: 1px solid #ff0000;
-  color: rgb(255, 255, 255);
+  color: rgb(255, 255, 255) !important;
   font-size: 12px;
   border-radius: 3px;
   cursor: pointer;
@@ -300,18 +326,20 @@ label {
 .reset-btn {
   padding: 6px 16px;
   background: rgb(179, 25, 25);
-  color: rgb(255, 255, 255);
+  color: rgb(255, 255, 255) !important;
   font-size: 14px;
   border: 1px solid rgb(179, 25, 25);
   border-radius: 5px;
   cursor: pointer;
   text-decoration: none;
 }
+
 .disabled-btn {
   pointer-events: none;
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 .required {
   color: red;
   font-weight: bold;

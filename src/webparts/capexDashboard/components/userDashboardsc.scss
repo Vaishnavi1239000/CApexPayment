@@ -263,7 +263,7 @@ input {
 .mainsecondapprove {
     display: flex;
     align-items: center;
-    margin: 5px 7px;
+    margin: 5px 12px;
     justify-content: space-between;
 }
 
@@ -272,7 +272,7 @@ input {
     background-color: #000;
     border: none;
     border-radius: 6px;
-    color: #fff;
+    color: #fff !important;
     cursor: pointer;
     display: flex;
     font-size: 14px;
