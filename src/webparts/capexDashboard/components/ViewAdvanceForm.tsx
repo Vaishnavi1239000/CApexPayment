@@ -20,6 +20,7 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
   const sp = spfi().using(SPFx(context));
   const [employee, setEmployee] = useState<any>({});
   // 🔹 Employee
+  const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
   const [mrnNumber, setMrnNumber] = useState("");
   const [mrnDate, setMrnDate] = useState("");
   const [mrnAmount, setMrnAmount] = useState("");
@@ -123,6 +124,9 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
 
     setVendorName(formData.VendorName || "");
     setSelectedVendorId(formData.VendorCode || null); // ✅ ADD THIS
+    if (formData.VendorCodeId) {
+      void getPreviousAdvances(formData.VendorCodeId);
+    }
     setSelectedVendorName(formData.VendorName || ""); // ✅ ADD THIS
     setMrnNumber(formData.MRNNumber || "");
     setMrnDate(formData.MRNDtae?.split("T")[0] || "");
@@ -169,16 +173,16 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
       setApprovalMatrix([]);
     }
     // ✅ Workflow History
-    if (formData?.WorkFlowHistory) {
+    if (formData?.WorkflowHistory) {
       try {
         const parsed =
-          typeof formData.WorkFlowHistory === "string"
-            ? JSON.parse(formData.WorkFlowHistory)
-            : formData.WorkFlowHistory;
+          typeof formData.WorkflowHistory === "string"
+            ? JSON.parse(formData.WorkflowHistory)
+            : formData.WorkflowHistory;
 
         setWorkflowHistory(Array.isArray(parsed) ? parsed : []);
       } catch (e) {
-        console.error("WorkFlowHistory parse error", e);
+        console.error("WorkflowHistory parse error", e);
         setWorkflowHistory([]);
       }
     } else {
@@ -220,9 +224,81 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
       console.log("Error fetching user:", error);
     }
   };
+
+  const getEmployeeDetails = async () => {
+    try {
+      debugger;
+
+      if (!formData?.Email) return;
+
+      const user = await sp.web.lists
+        .getByTitle("EmployeeMaster")
+        .items.select(
+          "EmployeeCode",
+          "EmployeeName",
+          "Division",
+          "Location",
+          "EmployeeEmail",
+          "ReportingManager/Title",
+          "HOD/Title",
+          "ContactNo",
+          "EmployeeStatus",
+          "CostCenter",
+        )
+        .expand("ReportingManager", "HOD")
+        .filter(`EmployeeEmail eq '${formData.Email}'`)
+        .top(1)();
+
+      if (user.length > 0) {
+        setEmployee(user[0]);
+      }
+    } catch (error) {
+      console.log("Error fetching employee:", error);
+    }
+  };
+
+  const getPreviousAdvances = async (vendorId: number) => {
+    try {
+       if (!vendorId) {
+      setPreviousAdvances([]);
+      return;
+    }
+      debugger;
+      console.log("Fetching for Vendor:", vendorId);
+
+      const data = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.select(
+          "PONumber",
+          "RequestAdvanceAmount",
+          "Created",
+          "VoucherDate",
+
+          "PaidAmount",
+          "Status",
+          "VendorCode/Id",
+        )
+        .expand("VendorCode")
+        .filter(`VendorCode/Id eq ${vendorId} and Status eq 'Paid'`)
+        .orderBy("Created", false)();
+
+      console.log("DATA:", data);
+
+      void setPreviousAdvances(data);
+    } catch (error) {
+      console.error("Error fetching previous advances:", error);
+      void setPreviousAdvances([]);
+    }
+  };
   useEffect(() => {
-    void getLoggedInUser();
+
+    debugger;
+    void getEmployeeDetails();
+   // void getLoggedInUser();
     void getVendors();
+     if (selectedVendorId) {
+      void getPreviousAdvances(selectedVendorId);
+    }
   }, []);
   return (
     <div className="MainUplodForm" style={{ margin: "5px 0px" }}>
@@ -235,23 +311,32 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
               <h1> Advance Payment (View) </h1>
             </div>
             {approvalMatrix.length === 0 ? (
-              <></>
+              <p>No approval data</p>
             ) : (
               <div className="displayWF">
                 <ul className="approval-flow">
-                  {approvalMatrix.map((a, index) => (
+                  {[
+                    {
+                      Role: "Initiator",
+                      Name:
+                        formData?.EmployeeName || employee.EmployeeName || "",
+                      Status: "Approved",
+                    },
+                    ...approvalMatrix.filter((a) => a.Role !== "Initiator"),
+                  ].map((a, index) => (
                     <li
                       key={index}
-                      className={`approval-step ${a.Status === "In Progress"
-                        ? "active"
-                        : a.Status === "Approved"
-                          ? "approved"
-                          : a.Status === "Rejected"
-                            ? "rejected"
-                            : a.Status === "Send Back"
-                              ? "sendback"
-                              : ""
-                        }`}
+                      className={`approval-step ${
+                        a.Status === "In Progress"
+                          ? "active"
+                          : a.Status === "Approved"
+                            ? "approved"
+                            : a.Status === "Rejected"
+                              ? "rejected"
+                              : a.Status === "Send Back"
+                                ? "sendback"
+                                : ""
+                      }`}
                     >
                       {a.Role} - {a.Name}
                     </li>
@@ -259,6 +344,7 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
                 </ul>
               </div>
             )}
+
 
             <div className="borderedbox">
               <div className="heading1">
@@ -369,7 +455,23 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
                       ))}
                     </select> */}
 
-                    <label className="fonttext">{selectedVendorId}</label>
+                    <select
+                      value={selectedVendorId ?? ""}
+                      className="form-control readonly"
+                      onChange={(e) => {
+                        const id = Number(e.target.value);
+                        const vendor = vendors.find((v) => v.Id === id);
+                        setSelectedVendorId(id);
+                        setSelectedVendorName(vendor?.VendorName || "");
+                      }}
+                    >
+                      <option value="">Select Vendor</option>
+                      {vendors.map((v) => (
+                        <option key={v.Id} value={v.Id}>
+                          {v.VendorCode}
+                        </option>
+                      ))}
+                    </select>
 
                   </div>
                   <div className="col-md-4">
@@ -511,27 +613,61 @@ const ViewAdvanceForm = ({ context, formData, onClose }: any) => {
                       <p>No history available</p>
                     ) : (
                       <div className="workflow-history">
-                        {workflowHistory.map((h, index) => (
-                          <div key={index} className="history-item">
-                            <div>
-                              {h.ActionTaken === "Submitted" && "📩 "}
-                              {h.ActionTaken === "Approved" && "✅ "}
-                              {h.ActionTaken === "Rejected" && "❌ "}
-                              {h.ActionTaken === "Send Back" && "↩ "}
-                              {h.ActionTaken === "Vouched" && "💰 "}
-                              {h.ActionTaken === "Paid" && "💸 "}
-                              {h.ActionTaken}
-                            </div>
+                        
 
-                            <div>
-                              <b>{h.CurrentApprover}</b>
-                            </div>
-                            <div>{h.Comment}</div>
-                            <div className="date">
-                              {new Date(h.Date).toLocaleString()}
-                            </div>
-                          </div>
-                        ))}
+                        <table
+                          className="workflow-table"
+                          style={{ width: "100%" }}
+                        >
+                          <thead>
+                            <tr>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action By
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action Taken
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Date
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Comment
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {workflowHistory
+                              .filter(
+                                (h: any) =>
+                                  h.ActionTaken &&
+                                  h.ActionTaken !== "Draft Saved" && h.ActionTaken !== "Edited",
+                              )
+                              .map((h: any, idx: number) => (
+                                <tr key={idx}>
+                                  <td style={{ padding: "8px" }}>
+                                    {h.CurrentApprover || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.ActionTaken || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Date
+                                      ? new Date(h.Date).toLocaleDateString(
+                                          "en-GB",
+                                        )
+                                      : ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Comment || ""}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                       
                       </div>
                     )}
                   </div>

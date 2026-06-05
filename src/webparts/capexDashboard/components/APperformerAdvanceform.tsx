@@ -23,7 +23,13 @@ interface IVendor {
 const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }) => {
 
   const sp = spfi().using(SPFx(context));
-
+  const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
+  const today = new Date();
+const localDate: string = new Date(
+  today.getTime() - today.getTimezoneOffset() * 60000
+)
+  .toISOString()
+  .split("T")[0];
   const [employee, setEmployee] = useState<any>({});
   const [attachments, setAttachments] = useState<any[]>([]);
   const [itemData, setItemData] = useState<any>(null);
@@ -49,6 +55,39 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
       setVendors(data);
     } catch (error) {
       console.error("Vendor fetch error:", error);
+    }
+  };
+  const getPreviousAdvances = async (vendorId: number) => {
+    try {
+       if (!vendorId) {
+      setPreviousAdvances([]);
+      return;
+    }
+      debugger;
+      console.log("Fetching for Vendor:", vendorId);
+
+      const data = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.select(
+          "PONumber",
+          "RequestAdvanceAmount",
+          "Created",
+          "VoucherDate",
+
+          "PaidAmount",
+          "Status",
+          "VendorCode/Id",
+        )
+        .expand("VendorCode")
+        .filter(`VendorCode/Id eq ${vendorId} and Status eq 'Paid'`)
+        .orderBy("Created", false)();
+
+      console.log("DATA:", data);
+
+      void setPreviousAdvances(data);
+    } catch (error) {
+      console.error("Error fetching previous advances:", error);
+      void setPreviousAdvances([]);
     }
   };
   const getLoggedInUser = async () => {
@@ -124,25 +163,41 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
 
   }, [formData]);
 
+  useEffect(() => {
+    if (selectedVendorId) {
+      console.log("Calling Previous Advances:", selectedVendorId);
+
+      void getPreviousAdvances(selectedVendorId);
+    }
+  }, [selectedVendorId]);
+
   // ✅ Approve
   const handleApprove = async () => {
 
     try {
 
-      if (!voucherDate) {
-        alert("Please select Voucher Date");
+       if (!voucherDate || voucherDate.trim() === "") {
+        alert("Please enter Voucher Date");
+        
         return;
       }
-
-      if (!voucherNumber) {
+ if (voucherDate > localDate) {
+      alert("Voucher date cannot be a future date");
+       
+        return;
+    }
+      if (!voucherNumber || voucherNumber.trim() === "") {
         alert("Please enter Voucher Number");
+       
         return;
       }
 
-      if (!approverRemarks) {
+      if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
+      
         return;
       }
+
 
       // =========================
       // 🔥 PARSE APPROVAL MATRIX
@@ -267,7 +322,7 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
 
           Status: nextStatus,
 
-          PendingAt: pendingAt,
+          PendingAt: "Pending for PF Approver UTR",
 
           // 🔥 IMPORTANT
           ApprovalMatrix: JSON.stringify(flow),
@@ -297,10 +352,12 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
 
     try {
 
-      if (!approverRemarks) {
+     if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
+      
         return;
       }
+
 
       // =========================
       // 🔥 PARSE MATRIX
@@ -428,10 +485,12 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
 
     try {
 
-      if (!approverRemarks) {
+     if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
+      
         return;
       }
+
 
       // =========================
       // 🔥 PARSE MATRIX
@@ -557,15 +616,19 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
               <img src={logo} />
               <h1> Advance Payment (Approver) </h1>
             </div>
-            {approvalMatrix.length === 0 ? (
-              <p></p>
+             {approvalMatrix.length === 0 ? (
+              <p>No approval data</p>
             ) : (
               <div className="displayWF">
                 <ul className="approval-flow">
+                   <li className={`approval-step`}>
+                    {`Initiator`} - {itemData?.EmployeeName}
+                  </li>
                   {approvalMatrix.map((a, index) => (
                     <li
                       key={index}
-                      className={`approval-step ${a.Status === "In Progress"
+                      className={`approval-step ${
+                        a.Status === "In Progress"
                           ? "active"
                           : a.Status === "Approved"
                             ? "approved"
@@ -574,7 +637,7 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
                               : a.Status === "Send Back"
                                 ? "sendback"
                                 : ""
-                        }`}
+                      }`}
                     >
                       {a.Role} - {a.Name}
                     </li>
@@ -707,6 +770,7 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
                       type="date"
                       value={voucherDate}
                       onChange={(e) => setVoucherDate(e.target.value)}
+                        max={new Date().toISOString().split("T")[0]}
                       className="form-control"
                     />
                   </div>
@@ -747,63 +811,73 @@ const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }
                   </div>
                 </div>
               </div>
-              <div className="heading1" style={{ marginTop: "10px" }}>
+             <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Workflow History</label>
               </div>
               <div className="main-formcontainer">
                 <div className="row mb-20">
                   <div className="col-md-12">
-                    {/* {workflowHistory.length === 0 ? (
+                    {workflowHistory.length === 0 ? (
                       <p>No history available</p>
                     ) : (
                       <div className="workflow-history">
-                        {workflowHistory.map((h, index) => (
-                          <div key={index} className="history-item">
-                            <div>
-                              {h.ActionTaken === "Approved" && "✅ "}
-                              {h.ActionTaken === "Rejected" && "❌ "}
-                              {h.ActionTaken === "Send Back" && "↩ "}
-                              {h.ActionTaken === "Vouched" && "💰 "}
-                              {h.ActionTaken}
-                            </div>
+                        
 
-                            <div>
-                              <b>{h.CurrentApprover}</b>
-                            </div>
-                            <div>{h.Comment}</div>
-                            <div className="date">
-                              {new Date(h.Date).toLocaleString()}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )} */}
-                    <div className='Workflowbox'>
-                      {workflowHistory && workflowHistory.length > 0 ? (
-                        <table className="workflow-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table
+                          className="workflow-table"
+                          style={{ width: "100%" }}
+                        >
                           <thead>
                             <tr>
-                              <th style={{ padding: '8px', textAlign: 'left' }}>Action Date</th>
-                              <th style={{ padding: '8px', textAlign: 'left' }}>Action By</th>
-                              <th style={{ padding: '8px', textAlign: 'left' }}>Action Taken</th>
-                              <th style={{ padding: '8px', textAlign: 'left' }}>Comment</th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action By
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action Taken
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Date
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Comment
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
-                            {workflowHistory.map((h: any, idx: number) => (
-                              <tr key={idx}>
-                                <td style={{ padding: '8px' }}>{h.Date ? new Date(h.Date).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).replace(",", "") : ""}</td>
-                                <td style={{ padding: '8px' }}>{h.CurrentApprover || ''}</td>
-                                <td style={{ padding: '8px' }}>{h.ActionTaken || ''}</td>
-                                <td style={{ padding: '8px' }}>{h.Comment || ''}</td>
-                              </tr>
-                            ))}
+                            {workflowHistory
+                              .filter(
+                                (h: any) =>
+                                  h.ActionTaken &&
+                                  h.ActionTaken !== "Draft Saved" && h.ActionTaken !== "Edited",
+                              )
+                              .map((h: any, idx: number) => (
+                                <tr key={idx}>
+                                  <td style={{ padding: "8px" }}>
+                                    {h.CurrentApprover || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.ActionTaken || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Date
+                                      ? new Date(h.Date).toLocaleDateString(
+                                          "en-GB",
+                                        )
+                                      : ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Comment || ""}
+                                  </td>
+                                </tr>
+                              ))}
                           </tbody>
                         </table>
-                      ) : (
-                        <p>No workflow history</p>
-                      )}
-                    </div>
+                       
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

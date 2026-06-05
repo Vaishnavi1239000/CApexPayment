@@ -2,11 +2,11 @@ import * as React from "react";
 import "./userDashboardsc.scss";
 
 import { useState } from "react";
-
+import View from "../assets/Eye.png";
 import logo from "../assets/SonaPNGLogo.png";
 import Edit from "../assets/Pencil.png";
 import User from "../assets/Userlogo.png";
-
+import ViewAdvanceForm from "./ViewAdvanceForm";
 import ApproverAdvanceForm from "./ApproverAdvanceForm";
 import { spfi } from "@pnp/sp";
 import { SPFx } from "@pnp/sp/presets/all";
@@ -21,6 +21,9 @@ const ApproverDashboard: React.FC<UserDashboardProps> = ({ context }) => {
   const [formType, setFormType] = useState<"new" | "view" | "approve" | null>(
     null,
   );
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
 
   const [activeMenu, setActiveMenu] = React.useState("My Request");
   const [searchText, setSearchText] = React.useState("");
@@ -114,8 +117,47 @@ const ApproverDashboard: React.FC<UserDashboardProps> = ({ context }) => {
       console.error("Form open error:", error);
     }
   };
+const handleApproveClick = async (item: any) => {
+  debugger;
+    try {
+      const fullItem = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(item.ID)
+        .select(
+    "*",
+    "Author/EMail"
+  )
+  .expand("Author")();
 
+      setSelectedItem(fullItem);
+      setFormType("approve");
+      setShowForm(true);
+    } catch (error) {
+      console.error("View error:", error);
+    }
+  };
+  const handleViewClick = async (item: any) => {
+    try {
+      const fullItem = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(item.ID)
+        .select(
+    "*",
+    "Author/EMail"
+  )
+  .expand("Author")();
+
+      setSelectedItem(fullItem);
+      setFormType("view");
+      setShowForm(true);
+    } catch (error) {
+      console.error("View error:", error);
+    }
+  };
+  // ✅ GET LIST DATA
   
+
+
 
 const getCapexData = async () => {
 
@@ -226,25 +268,62 @@ const getCapexData = async () => {
       (!status || item.status?.toLowerCase().includes(status))
     );
   });
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  // ✅ LOAD DATA
-  React.useEffect(() => {
-    if (!context) return;
-    void getLoggedInUser();
-    void getCapexData();
-  }, [context]);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  const paginatedData = filteredData.slice(startIndex, endIndex);
+React.useEffect(() => {
+  if (!context) return;
+  void getLoggedInUser();
+}, [context]);
+
+React.useEffect(() => {
+  if (!context) return;
+  void getCapexData();
+}, [context, activeMenu]);
+ 
 
   // ✅ OPEN VIEW PAGE
+ if (showForm) {
+   if (formType === "approve") {
+      return (
+        <ApproverAdvanceForm
+          context={context}
+          itemId={selectedItem?.ID}
+          
+        />
+      );
+    }
+     if (formType === "view") {
+      return (
+        <ViewAdvanceForm
+          context={context}
+          formData={selectedItem}
+          onClose={() => {
+            setShowForm(false);
+            setFormType(null);
+            void getCapexData();
+          }}
+        />
+      );
+    }
+  
 
-  if (showForm && selectedItem) {
-    return (
-      <ApproverAdvanceForm
-        context={context}
-        formData={selectedItem}
-        onClose={() => setShowForm(false)}
-      />
-    );
+   
   }
+  // if (showForm && selectedItem) {
+  //   return (
+
+      
+  //     <ApproverAdvanceForm
+  //       context={context}
+  //       formData={selectedItem}
+  //       onClose={() => setShowForm(false)}
+  //     />
+  //   );
+  // }
 
   return (
     <>
@@ -373,16 +452,28 @@ const getCapexData = async () => {
                       filteredData.map((item, i) => (
                         <tr key={i}>
                           <td className="px-4 py-2">
-                            <span
-                              onClick={() => {
-                                console.log("Clicked", item);
-                                handleFormOpen(item, "approve");
-                              }}
-                              style={{ cursor: "pointer" }}
-                              title="Approve"
-                            >
-                              <img src={Edit} width={15} alt="Approve" />
-                            </span>
+                            {(activeMenu === "Paid" ||
+                              activeMenu === "Rejected") && (
+                              <span
+                                onClick={() => handleViewClick(item)}
+                                style={{
+                                  cursor: "pointer",
+                                  marginRight: "10px",
+                                }}
+                              >
+                                <img src={View} width={15} alt="View" />
+                              </span>
+                            )}
+
+                            {activeMenu === "My Request" &&
+                              
+                                <span
+                                  onClick={() => handleApproveClick(item)}
+                                  style={{ cursor: "pointer" }}
+                                >
+                                  <img src={Edit} width={15} alt="Edit" />
+                                </span>
+                              }
                           </td>
                           <td className="px-4 py-2">{item.id}</td>
                           <td className="px-4 py-2">{item.date}</td>
@@ -402,6 +493,33 @@ const getCapexData = async () => {
                     )}
                   </tbody>
                 </table>
+                 <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginTop: "15px",
+                  }}
+                >
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                  >
+                    Previous
+                  </button>
+
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </main>

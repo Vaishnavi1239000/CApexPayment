@@ -89,11 +89,15 @@ const NewAdvanceform = ({ context }: any) => {
 
   const getPreviousAdvances = async (vendorId: number) => {
     try {
+       if (!vendorId) {
+      setPreviousAdvances([]);
+      return;
+    }
       debugger;
       console.log("Fetching for Vendor:", vendorId);
 
       const data = await sp.web.lists
-        .getByTitle("OpexAdvance")
+        .getByTitle("CapexPayment")
         .items.select(
           "PONumber",
           "RequestAdvanceAmount",
@@ -335,15 +339,15 @@ const NewAdvanceform = ({ context }: any) => {
   const validateForm = () => {
     const errors: string[] = [];
 
-    if (!selectedVendorId) {
+    if (!selectedVendorId || selectedVendorId === 0) {
       errors.push("Please select Vendor");
     }
 
-    if (!poNumber) {
+    if (!poNumber || poNumber.trim() === "") {
       errors.push("Please enter PO Number");
     }
 
-    if (!poDate) {
+    if (!poDate || poDate === "Invalid Date") {
       errors.push("Please select PO Date");
     }
 
@@ -352,28 +356,28 @@ const NewAdvanceform = ({ context }: any) => {
       // return;
     }
 
-    if (!poTerms) {
+    if (!poTerms || poTerms.trim() === "") {
       errors.push("Please enter PO Terms");
     }
 
-    if (!poAmount) {
+    if (!poAmount || poAmount.trim() === "") {
       errors.push("Please enter PO Amount");
     }
 
     // 🔥 MRN Validation
-    if (!mrnNumber) {
+    if (!mrnNumber || mrnNumber.trim() === "") {
       errors.push("Please enter MRN Number");
     }
 
-    if (!mrnDate) {
+    if (!mrnDate || mrnDate === "Invalid Date") {
       errors.push("Please select MRN Date");
     }
 
-    if (!mrnAmount) {
+    if (!mrnAmount || mrnAmount.trim() === "") {
       errors.push("Please enter MRN Amount");
     }
 
-    if (!requestedAmount) {
+    if (!requestedAmount || requestedAmount.trim() === "") {
       errors.push("Please enter Requested Amount");
     }
 
@@ -387,7 +391,7 @@ const NewAdvanceform = ({ context }: any) => {
     if (!attachments || attachments.length === 0) {
       errors.push("Please upload attachment");
     }
-    if (!requestedAmount) {
+    if (!requestedAmount || requestedAmount.trim() === "") {
       errors.push("Please enter Requested Amount");
     }
 
@@ -433,10 +437,10 @@ const NewAdvanceform = ({ context }: any) => {
       // const ensuredUser = await sp.web.ensureUser(userEmail);
       const flow = await buildApprovalFlow();
 
-     // const currentApprover = flow.length > 0 ? flow[0].Id : null;
+      const currentApprover = flow.length > 0 ? flow[0].Id : null;
 
       // 🔥 workflow history
-      const wfHistory = [
+      const WorkflowHistory = [
         {
           CurrentApprover: employee.EmployeeName,
           ActionTaken: "Submitted",
@@ -493,8 +497,8 @@ const NewAdvanceform = ({ context }: any) => {
         StatusFlow: "Pending for Approver",
         Status: "Pending for Approver",
         ApprovalMatrix: JSON.stringify(flow),
-        //CurrentApproverId: currentApprover,
-        WorkflowHistory: JSON.stringify(wfHistory),
+        CurrentApproverId: currentApprover,
+        WorkflowHistory: JSON.stringify(WorkflowHistory),
       });
 
       debugger;
@@ -544,7 +548,7 @@ const NewAdvanceform = ({ context }: any) => {
       // =========================
       // 🔥 WORKFLOW HISTORY (DRAFT)
       // =========================
-      const wfHistory = [
+      const WorkflowHistory = [
         {
           CurrentApprover: employee.EmployeeName,
           ActionTaken: "Draft Saved",
@@ -600,9 +604,9 @@ const NewAdvanceform = ({ context }: any) => {
 
         StatusFlow: "Draft",
         Status: "Draft",
-        // ApprovalMatrix: JSON.stringify(flow),
-        // CurrentApproverId: currentApprover,
-        // WorkFlowHistory: JSON.stringify(wfHistory),
+         ApprovalMatrix: JSON.stringify(flow),
+         CurrentApproverId: currentApprover,
+         WorkflowHistory: JSON.stringify(WorkflowHistory),
       });
 
       const safeCapexId = capexId.replace(/\//g, "_");
@@ -639,12 +643,14 @@ const NewAdvanceform = ({ context }: any) => {
               <img src={logo} />
               <h1> Capex Payment Request </h1>
             </div>
-            {approvalMatrix.length === 0 ? (
+           {approvalMatrix.length === 0 ? (
               <p>Loading...</p>
             ) : (
               <div className="displayWF">
                 <ul className="approval-flow">
-                  
+                   <li className={`approval-step`}>
+                      {`Initiator`} - {employee.EmployeeName}
+                    </li>
                   {approvalMatrix.map((a, index) => (
                     <li
                       key={index}
@@ -758,9 +764,13 @@ const NewAdvanceform = ({ context }: any) => {
                         setSelectedVendorName(vendor?.VendorName || "");
                         setSelectedVendorCode(vendor?.VendorCode || "");
 
-                        if (id) {
-                          void getPreviousAdvances(id);
-                        }
+                      
+                         if (id > 0) {
+                            void getPreviousAdvances(id);
+                          } else {
+                            // Clear table data
+                            setPreviousAdvances([]);
+                          }
                       }}
                       className="formtext-control"
                     >
@@ -988,23 +998,35 @@ const NewAdvanceform = ({ context }: any) => {
               <div className="main-formcontainer" style={{ marginTop: "10px" }}>
                 <div className="row mb-20">
                   <div className="col-md-4">
-                    <label className="font">Attach &nbsp; <span className="required">*</span> </label>
-                    <input type="file" multiple style={{height :"34px", padding: "3px"}}
+                    <label className="font">Attach</label>{" "}
+                    <span className="required" style={{ color: "red" }}>
+                      *
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      className="form-control"
                       onChange={(e) => {
                         if (e.target.files) {
-                          setAttachments((prev) => [...prev,
-                          ...Array.from(e.target.files),]);
+                          setAttachments((prev) => [
+                            ...prev,
+                            ...Array.from(e.target.files),
+                          ]);
                         }
-                      }} />
-
-                    {/* 🔥 Show selected files */}
+                      }}
+                    />
                     {attachments.length > 0 && (
                       <ul style={{ marginTop: "10px" }}>
-                        {attachments.map((file, index) => (
+                        {attachments.map((file: File, index: number) => (
                           <li key={index}>
-                            {file.name}
+                            <a
+                              href={URL.createObjectURL(file)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {file.name}
+                            </a>
 
-                            {/* 🔥 Remove button */}
                             <button
                               type="button"
                               style={{
@@ -1020,6 +1042,27 @@ const NewAdvanceform = ({ context }: any) => {
                         ))}
                       </ul>
                     )}
+                    {/* {attachments.length > 0 && (
+                      <ul style={{ marginTop: "10px" }}>
+                        {attachments.map((file, index) => (
+                          <li key={index}>
+                            {file.name}
+
+                            <button
+                              type="button"
+                              style={{
+                                marginLeft: "10px",
+                                color: "red",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => handleRemoveFile(index)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )} */}
                   </div>
                 </div>
               </div>

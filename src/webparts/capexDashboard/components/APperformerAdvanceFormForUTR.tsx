@@ -23,7 +23,14 @@ interface IVendor {
 const APperformerAdvanceFormForUTR: React.FC<IProps> = ({ context, formData, onClose }) => {
 
   const sp = spfi().using(SPFx(context));
+  const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const today = new Date();
+const localDate: string = new Date(
+  today.getTime() - today.getTimezoneOffset() * 60000
+)
+  .toISOString()
+  .split("T")[0];
   const [employee, setEmployee] = useState<any>({});
   const [itemData, setItemData] = useState<any>(null);
   const [approverRemarks, setApproverRemarks] = useState("");
@@ -71,6 +78,39 @@ const getLoggedInUser = async () => {
       }
     } catch (error) {
       console.log("Error fetching user:", error);
+    }
+  };
+  const getPreviousAdvances = async (vendorId: number) => {
+    try {
+      debugger;
+       if (!vendorId) {
+      setPreviousAdvances([]);
+      return;
+    }
+      console.log("Fetching for Vendor:", vendorId);
+
+      const data = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.select(
+          "PONumber",
+          "RequestAdvanceAmount",
+          "Created",
+          "VoucherDate",
+
+          "PaidAmount",
+          "Status",
+          "VendorCode/Id",
+        )
+        .expand("VendorCode")
+        .filter(`VendorCode/Id eq ${vendorId} and Status eq 'Paid'`)
+        .orderBy("Created", false)();
+
+      console.log("DATA:", data);
+
+      void setPreviousAdvances(data);
+    } catch (error) {
+      console.error("Error fetching previous advances:", error);
+      void setPreviousAdvances([]);
     }
   };
   const getAttachments = async (capexId: string) => {
@@ -132,11 +172,11 @@ const getLoggedInUser = async () => {
       }
 
       // ✅ Workflow History
-      if (item.WorkFlowHistory) {
+      if (item.WorkflowHistory) {
         try {
-          setWorkflowHistory(JSON.parse(item.WorkFlowHistory));
+          setWorkflowHistory(JSON.parse(item.WorkflowHistory));
         } catch (e) {
-          console.error("WorkFlowHistory parse error", e);
+          console.error("WorkflowHistory parse error", e);
         }
       }
     } catch (error) {
@@ -166,21 +206,41 @@ const getLoggedInUser = async () => {
   
   }, [formData]);
 
+  useEffect(() => {
+    if (selectedVendorId) {
+      console.log("Calling Previous Advances:", selectedVendorId);
+
+      void getPreviousAdvances(selectedVendorId);
+    }
+  }, [selectedVendorId]);
+
   // ✅ Approve
   const handleApprove = async () => {
     try {
-      if (!UTRDate) {
-        alert("Please select UTR Date");
+       if (!UTRDate || UTRDate.trim() === "") {
+        alert("Please enter UTR Date");
+       
         return;
       }
-      if (!UTRNumber) {
+       if (UTRDate > localDate) {
+      alert("UTR date cannot be a future date");
+      // return;
+       
+        return;
+    }
+
+      if (!UTRNumber || UTRNumber.trim() === "") {
         alert("Please enter UTR Number");
+        
         return;
       }
-      if (!UTRRemarks) {
+
+      if (!UTRRemarks || UTRRemarks.trim() === "") {
         alert("Please enter UTR Remarks");
+       
         return;
       }
+
 
       // 🔥 HISTORY
       const history = itemData.WorkflowHistory
@@ -229,15 +289,16 @@ const getLoggedInUser = async () => {
   // ✅ Sent Back
   const handleSendBack = async () => {
     try {
-      if (!UTRRemarks) {
+     if (!UTRRemarks || UTRRemarks.trim() === "") {
         alert("Please enter UTR Remarks");
+       
         return;
       }
 
-      const history = itemData.WorkFlowHistory
-        ? (typeof itemData.WorkFlowHistory === "string"
-          ? JSON.parse(itemData.WorkFlowHistory)
-          : itemData.WorkFlowHistory)
+      const history = itemData.WorkflowHistory
+        ? (typeof itemData.WorkflowHistory === "string"
+          ? JSON.parse(itemData.WorkflowHistory)
+          : itemData.WorkflowHistory)
         : [];
 
       history.push({
@@ -287,15 +348,16 @@ const getLoggedInUser = async () => {
   // ✅ Reject
   const handleReject = async () => {
     try {
-      if (!UTRRemarks) {
+      if (!UTRRemarks || UTRRemarks.trim() === "") {
         alert("Please enter UTR Remarks");
+       
         return;
       }
 
-      const history = itemData.WorkFlowHistory
-        ? (typeof itemData.WorkFlowHistory === "string"
-          ? JSON.parse(itemData.WorkFlowHistory)
-          : itemData.WorkFlowHistory)
+      const history = itemData.WorkflowHistory
+        ? (typeof itemData.WorkflowHistory === "string"
+          ? JSON.parse(itemData.WorkflowHistory)
+          : itemData.WorkflowHistory)
         : [];
 
       history.push({
@@ -359,23 +421,27 @@ const getLoggedInUser = async () => {
               <h1> Advance Payment (Approver) </h1>
             </div>
             {approvalMatrix.length === 0 ? (
-              <p></p>
+              <p>No approval data</p>
             ) : (
               <div className="displayWF">
                 <ul className="approval-flow">
+                  <li className={`approval-step`}>
+                    {`Initiator`} - {itemData?.EmployeeName}
+                  </li>
                   {approvalMatrix.map((a, index) => (
                     <li
                       key={index}
-                      className={`approval-step ${a.Status === "In Progress"
-                        ? "active"
-                        : a.Status === "Approved"
-                          ? "approved"
-                          : a.Status === "Rejected"
-                            ? "rejected"
-                            : a.Status === "Send Back"
-                              ? "sendback"
-                              : ""
-                        }`}
+                      className={`approval-step ${
+                        a.Status === "In Progress"
+                          ? "active"
+                          : a.Status === "Approved"
+                            ? "approved"
+                            : a.Status === "Rejected"
+                              ? "rejected"
+                              : a.Status === "Send Back"
+                                ? "sendback"
+                                : ""
+                      }`}
                     >
                       {a.Role} - {a.Name}
                     </li>
@@ -514,6 +580,7 @@ const getLoggedInUser = async () => {
                   <div className="col-md-4">
                     <label className="font">UTR Date</label>
                     <input type="date" className="font-control" value={UTRDate}
+                      max={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setUTRDate(e.target.value)} />
                   </div>
                   <div className="col-md-4">
@@ -528,34 +595,71 @@ const getLoggedInUser = async () => {
                   </div>
                 </div>
               </div>
-              <div className="heading1">
+               <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Workflow History</label>
               </div>
-              <div className='main-formcontainer'>
-                <div className='row mb-20'>
+              <div className="main-formcontainer">
+                <div className="row mb-20">
                   <div className="col-md-12">
                     {workflowHistory.length === 0 ? (
                       <p>No history available</p>
                     ) : (
                       <div className="workflow-history">
-                        {workflowHistory.map((h, index) => (
-                          <div key={index} className="history-item">
-                            <div>
-                              {h.ActionTaken === "Approved" && "✅ "}
-                              {h.ActionTaken === "Rejected" && "❌ "}
-                              {h.ActionTaken === "Send Back" && "↩ "}
-                              {h.ActionTaken === "Vouched" && "💰 "}
-                              {h.ActionTaken === "Paid" && "💸 "}
-                              {h.ActionTaken}
-                            </div>
+                        
 
-                            <div><b>{h.CurrentApprover}</b></div>
-                            <div>{h.Comment}</div>
-                            <div className="date">
-                              {new Date(h.Date).toLocaleString()}
-                            </div>
-                          </div>
-                        ))}
+                        <table
+                          className="workflow-table"
+                          style={{ width: "100%" }}
+                        >
+                          <thead>
+                            <tr>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action By
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action Taken
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Date
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Comment
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {workflowHistory
+                              .filter(
+                                (h: any) =>
+                                  h.ActionTaken &&
+                                  h.ActionTaken !== "Draft Saved" && h.ActionTaken !== "Edited",
+                              )
+                              .map((h: any, idx: number) => (
+                                <tr key={idx}>
+                                  <td style={{ padding: "8px" }}>
+                                    {h.CurrentApprover || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.ActionTaken || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Date
+                                      ? new Date(h.Date).toLocaleDateString(
+                                          "en-GB",
+                                        )
+                                      : ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Comment || ""}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                       
                       </div>
                     )}
                   </div>

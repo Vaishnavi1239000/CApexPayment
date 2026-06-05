@@ -71,6 +71,11 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   // =========================
   const getPreviousAdvances = async (vendorId: number) => {
     try {
+
+       if (!vendorId) {
+      setPreviousAdvances([]);
+      return;
+    }
       debugger;
       console.log("Fetching for Vendor:", vendorId);
 
@@ -312,6 +317,32 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       console.error("Delete error:", error);
     }
   };
+  const handleDeleteAttachment = async (fileName: string) => {
+    try {
+      if (!formData?.CapexID) return;
+
+      const safeCapexId = formData.CapexID.replace(/\//g, "_");
+
+      const folderPath = `/sites/SonaFinance/CapexPaymentDocs/${safeCapexId}`;
+
+      await sp.web
+        .getFolderByServerRelativePath(folderPath)
+        .files.getByUrl(fileName)
+        .recycle();
+
+      // Update UI after delete
+      const updatedFiles = attachments.filter(
+        (file: any) => file.Name !== fileName,
+      );
+
+      setAttachments(updatedFiles);
+
+      alert("Attachment deleted successfully ✅");
+    } catch (error) {
+      console.error("Delete attachment error:", error);
+      alert("Error deleting attachment ❌");
+    }
+  };
 
   const getAttachments = async (capexId: string) => {
     try {
@@ -391,43 +422,43 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   const validateForm = () => {
     const errors: string[] = [];
 
-    if (!selectedVendorId) {
+    if (!selectedVendorId || selectedVendorId === 0) {
       errors.push("Please select Vendor");
     }
 
-    if (!poNumber) {
+    if (!poNumber || poNumber.trim() === "") {
       errors.push("Please enter PO Number");
     }
 
-    if (!poDate) {
+    if (!poDate || poDate === "Invalid Date") {
       errors.push("Please select PO Date");
     }
  if (poDate > localDate) {
       errors.push("PO date cannot be a future date");
       // return;
     }
-    if (!poTerms) {
+    if (!poTerms || poTerms.trim() === "") {
       errors.push("Please enter PO Terms");
     }
 
-    if (!poAmount) {
+    if (!poAmount || poAmount.trim() === "" ) {
       errors.push("Please enter PO Amount");
     }
 
     // 🔥 MRN Validation
-    if (!mrnNumber) {
+    if (!mrnNumber || mrnNumber.trim() === "") {
       errors.push("Please enter MRN Number");
     }
 
-    if (!mrnDate) {
+    if (!mrnDate || mrnDate === "Invalid Date") {
       errors.push("Please select MRN Date");
     }
 
-    if (!mrnAmount) {
+    if (!mrnAmount || mrnAmount.trim() === "") {
       errors.push("Please enter MRN Amount");
     }
 
-    if (!requestedAmount) {
+    if (!requestedAmount || requestedAmount.trim() === "") {
       errors.push("Please enter Requested Amount");
     }
 
@@ -440,10 +471,13 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       errors.push("Please enter Installation Details");
     }
 
-    if (!attachments || attachments.length === 0) {
-      errors.push("Please upload attachment");
+    if (
+      (!attachments || attachments.length === 0) &&
+      (!selectedFiles || selectedFiles.length === 0)
+    ) {
+      errors.push("Please upload at least one attachment");
     }
-    if (!requestedAmount) {
+    if (!requestedAmount || requestedAmount.trim() === "") {
       errors.push("Please enter Requested Amount");
     }
 
@@ -474,17 +508,22 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         return;
       }
 
-      const ensuredUser = await sp.web.ensureUser(
-        selectedUser[0]?.secondaryText,
-      );
+//       const email = selectedUser?.[0]?.mail || selectedUser?.[0]?.secondaryText;
+
+// if (!email) {
+//   alert("Invalid user selected");
+//   return;
+// }
+
+// const ensuredUser = await sp.web.ensureUser(email);
       // 🔥 preserve matrix (no reset)
       const existingFlow = formData.ApprovalMatrix
         ? JSON.parse(formData.ApprovalMatrix)
         : [];
 
       // 🔥 preserve history
-      const history = formData.WorkFlowHistory
-        ? JSON.parse(formData.WorkFlowHistory)
+      const history = formData.WorkflowHistory
+        ? JSON.parse(formData.WorkflowHistory)
         : [];
 
       // 🔥 add edit entry
@@ -494,7 +533,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         // Comment: remarks,
         Date: new Date().toISOString(),
       });
-      //const currentApproverId = formData.CurrentApproverId || null;
+      const currentApproverId = formData.CurrentApproverId || null;
       await sp.web.lists.getByTitle("CapexPayment").items.add({
         Title: formData.CapexId,
         CapexId: formData.CapexId,
@@ -544,8 +583,8 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         StatusFlow: "Pending for Approver",
         Status: "Pending for Approver",
         ApprovalMatrix: JSON.stringify(existingFlow),
-      //  CurrentApproverId: currentApproverId,
-        WorkFlowHistory: JSON.stringify(history),
+        CurrentApproverId: currentApproverId,
+        WorkflowHistory: JSON.stringify(history),
       });
 
       if (selectedFiles.length > 0) {
@@ -626,16 +665,16 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       setApprovalMatrix([]);
     }
     // ✅ Workflow History
-    if (formData?.WorkFlowHistory) {
+    if (formData?.WorkflowHistory) {
       try {
         const parsed =
-          typeof formData.WorkFlowHistory === "string"
-            ? JSON.parse(formData.WorkFlowHistory)
-            : formData.WorkFlowHistory;
+          typeof formData.WorkflowHistory === "string"
+            ? JSON.parse(formData.WorkflowHistory)
+            : formData.WorkflowHistory;
 
         setWorkflowHistory(Array.isArray(parsed) ? parsed : []);
       } catch (e) {
-        console.error("WorkFlowHistory parse error", e);
+        console.error("WorkflowHistory parse error", e);
         setWorkflowHistory([]);
       }
     } else {
@@ -665,28 +704,23 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
               <img src={logo} />
               <h1>Edit Advance Payment </h1>
             </div>
-            {approvalMatrix.length === 0 ? (
-              <p>No approval data</p>
-            ) : (
-              <div className="displayWF">
-                <ul className="approval-flow">
-                  {approvalMatrix.map((a, index) => (
-                    <li
-                      key={index}
-                      className={`approval-step ${
-                        a.Status === "In Progress"
-                          ? "active"
-                          : a.Status === "Approved"
-                            ? "approved"
-                            : ""
-                      }`}
-                    >
-                      {a.Role} - {a.Name}
+             <li className={`approval-step`}>
+                      {`Initiator`} - {employee.EmployeeName}
                     </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+           {approvalMatrix.map((a, index) => (
+              <li
+                key={index}
+                className={`approval-step ${
+                  a.Status === "In Progress"
+                    ? "active"
+                    : a.Status === "Approved"
+                      ? "approved"
+                      : ""
+                }`}
+              >
+                {a.Role} - {a.Name}
+              </li>
+            ))}
             <div className="borderedbox">
               <div className="heading1">
                 <label>Requestor Information</label>
@@ -779,7 +813,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                   <div className="col-md-4">
                     <label className="font">Vendor Code</label>
                     <span className="required">*</span>
-                    <select
+                   <select
                       value={selectedVendorId || ""}
                       onChange={(e) => {
                         const id = Number(e.target.value);
@@ -788,10 +822,13 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                         setSelectedVendorId(id);
                         setSelectedVendorName(vendor?.VendorName || "");
 
-                        // 🔥 IMPORTANT: Fetch previous advances
-                        if (id) {
-                          void getPreviousAdvances(id);
-                        }
+                        if (id > 0) {
+                            void getPreviousAdvances(id);
+                          } else {
+                            // Clear table data
+                            setPreviousAdvances([]);
+                          }
+                       
                       }}
                       className="formtext-control"
                     >
@@ -802,6 +839,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                         </option>
                       ))}
                     </select>
+                    
 
                     {/* <select
                       value={selectedVendorId || ""}
@@ -1044,12 +1082,28 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
               </div>
               <div className="main-formcontainer">
                 <div className="row mb-20">
-                  <div className="col-md-4">
-                    <label className="font">Attachments <span className="required">*</span></label>
+                   <div className="col-md-4">
+                    <label className="font">
+                      Attachments
+                      <span className="required" style={{ color: "red" }}>
+                        *
+                      </span>
+                    </label>
+
+                    {/* Existing Attachments */}
+                    {/* Existing Attachments */}
                     {attachments.length > 0 && (
-                      <ul>
+                      <ul className="mt-2">
                         {attachments.map((file: any, index: number) => (
-                          <li key={index}>
+                          <li
+                            key={index}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "5px",
+                            }}
+                          >
                             <a
                               href={file.ServerRelativeUrl}
                               target="_blank"
@@ -1058,13 +1112,54 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                               {file.Name}
                             </a>
 
-                            {/* 🔥 DELETE FROM SHAREPOINT */}
+                           
                             <button
                               type="button"
-                              style={{ marginLeft: "10px", color: "red" }}
-                              onClick={() => handleDeleteExistingFile(file)}
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleDeleteAttachment(file.Name)}
                             >
                               Delete
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    
+                    {selectedFiles.length > 0 && (
+                      <ul className="mt-2">
+                        {selectedFiles.map((file: File, index: number) => (
+                          <li
+                            key={index}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "5px",
+                            }}
+                          >
+                             <a
+                            href={URL.createObjectURL(file)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {file.name}
+                            </a>
+                            {/* <span>{file.name}</span> */}
+
+                          
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => {
+                                const updatedFiles = selectedFiles.filter(
+                                  (_: File, i: number) => i !== index,
+                                );
+
+                                setSelectedFiles(updatedFiles);
+                              }}
+                            >
+                              Remove
                             </button>
                           </li>
                         ))}
@@ -1074,7 +1169,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                     <input
                       type="file"
                       multiple
-                      style={{height :"34px", padding: "3px"}}
+                      className="form-control"
                       onChange={(e) => {
                         if (e.target.files) {
                           setSelectedFiles(Array.from(e.target.files));
@@ -1094,24 +1189,61 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                       <p>No history available</p>
                     ) : (
                       <div className="workflow-history">
-                        {workflowHistory.map((h, index) => (
-                          <div key={index} className="history-item">
-                            <div>
-                              {h.ActionTaken === "Approved" && "✅ "}
-                              {h.ActionTaken === "Rejected" && "❌ "}
-                              {h.ActionTaken === "Send Back" && "↩ "}
-                              {h.ActionTaken}
-                            </div>
+                        
 
-                            <div>
-                              <b>{h.CurrentApprover}</b>
-                            </div>
-                            <div>{h.Comment}</div>
-                            <div className="date">
-                              {new Date(h.Date).toLocaleString()}
-                            </div>
-                          </div>
-                        ))}
+                        <table
+                          className="workflow-table"
+                          style={{ width: "100%" }}
+                        >
+                          <thead>
+                            <tr>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action By
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Action Taken
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Date
+                              </th>
+                              <th style={{ padding: "8px", textAlign: "left" }}>
+                                Comment
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {workflowHistory
+                              .filter(
+                                (h: any) =>
+                                  h.ActionTaken &&
+                                  h.ActionTaken !== "Draft Saved" && h.ActionTaken !== "Edited",
+                              )
+                              .map((h: any, idx: number) => (
+                                <tr key={idx}>
+                                  <td style={{ padding: "8px" }}>
+                                    {h.CurrentApprover || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.ActionTaken || ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Date
+                                      ? new Date(h.Date).toLocaleDateString(
+                                          "en-GB",
+                                        )
+                                      : ""}
+                                  </td>
+
+                                  <td style={{ padding: "8px" }}>
+                                    {h.Comment || ""}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                       
                       </div>
                     )}
                   </div>

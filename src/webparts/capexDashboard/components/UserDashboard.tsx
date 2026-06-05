@@ -20,9 +20,11 @@ interface UserDashboardProps {
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ context }) => {
   const sp = spfi().using(SPFx(context));
-  const [formType, setFormType] = useState<"view" | "new" | "edit" | null>(
+  const [formType, setFormType] = useState<"view" | "new" | "Edit" | null>(
     null,
   );
+const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [activeMenu, setActiveMenu] = React.useState("My Request");
   const [searchText, setSearchText] = React.useState("");
@@ -41,196 +43,155 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ context }) => {
       console.error("User error:", error);
     }
   };
-
-  // ✅ GET LIST DATA
   const getCapexData = async () => {
-  try {
-    debugger;
+    try {
+      const currentUser = await sp.web.currentUser();
 
-    let filterQuery = "";
+      let filterQuery = `Author/Id eq ${currentUser.Id}`;
 
-    const currentUser = await sp.web.currentUser();
-
-    // ✅ My Request
-    if (activeMenu === "My Request") {
-      filterQuery = `AuthorId eq ${currentUser.Id} and Status ne 'Paid' and Status ne 'Rejected'`;
-    }
-
-    // ✅ Paid
-    else if (activeMenu === "Paid") {
-      filterQuery = "Status eq 'Paid'";
-    }
-
-    // ✅ Rejected
-    else if (activeMenu === "Rejected") {
-      filterQuery = "Status eq 'Rejected'";
-    }
-
-    const items = await sp.web.lists
-      .getByTitle("CapexPayment")
-      .items.select(
-        "ID",
-        "Title",
-        "Created",
-        "EmployeeName",
-
-        // ✅ SIMPLE TEXT FIELDS
-       // "VendorCode",
-        "VendorName",
-
-        "PONumber",
-        "RequestedAmountforPayment",
-        "Status",
-
-       
-      )
       
-      .filter(filterQuery)
-      .orderBy("ID", false)();
+      if (activeMenu === "My Request") {
+        filterQuery = `
+        Author/Id eq ${currentUser.Id}
+        and Status ne 'Paid'
+        and Status ne 'Rejected'
+      `
+          .replace(/\n/g, "")
+          .trim();
+      }
 
-    console.log("Items:", items);
+      
+      else if (activeMenu === "Paid") {
+        filterQuery = `
+        Author/Id eq ${currentUser.Id}
+        and Status eq 'Paid'
+      `
+          .replace(/\n/g, "")
+          .trim();
+      }
 
-    const formatted = items.map((item: any) => ({
-      ID: item.ID,
+      
+      else if (activeMenu === "Rejected") {
+        filterQuery = `
+        Author/Id eq ${currentUser.Id}
+        and Status eq 'Rejected'
+      `
+          .replace(/\n/g, "")
+          .trim();
+      }
 
-      id: item.Title,
+      console.log("Filter Query:", filterQuery);
 
-      date: item.Created
-        ? new Date(item.Created).toLocaleDateString("en-GB")
-        : "",
+      const items = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.select(
+          "ID",
+          "Title",
+          "Created",
+          "EmployeeName",
+          "VendorName",
+          //"VendorCode/Id",
+          //"VendorCode/VendorCode",
+          "PONumber",
+          "RequestedAmountforPayment",
+          "Status",
+          "Author/Id",
+        )
+        .expand( "Author")
+        .filter(filterQuery)
+        .orderBy("ID", false)();
 
-      EmployeeName: item.EmployeeName || "",
+      const formatted = items.map((item: any) => ({
+        ID: item.ID,
+        id: item.Title,
+        date: item.Created
+          ? new Date(item.Created).toLocaleDateString("en-GB")
+          : "",
+        EmployeeName: item.EmployeeName,
+        vendor: item.VendorName || "",
+       // vendorCode: item.VendorCode?.VendorCode || "",
+        po: item.PONumber || "",
+        amount: item.RequestedAmountforPayment || 0,
+        status: item.Status || "",
+      }));
 
-      // ✅ DIRECT FIELDS
-      vendor: item.VendorName || "",
+      setData(formatted);
+    } catch (error) {
+      console.error("Data error:", error);
+    }
+  };
+  const filteredData = data.filter((item) => {
+    const text = searchText.toLowerCase();
+    const status = statusFilter.toLowerCase();
 
-     // vendorCode: item.VendorCode || "",
+    let menuFilter = true;
 
-      po: item.PONumber || "",
-
-      amount: item.RequestedAmountforPayment || 0,
-
-      status: item.Status || "",
-    }));
-
-    setData(formatted);
-  } catch (error) {
-    console.error("Data error:", error);
-  }
-};
- const getCapexData12 = async () => {
-  try {
-    debugger;
-
-    let filterQuery = "";
-
-    const currentUser = await sp.web.currentUser();
-
-    // ✅ My Request
-    if (activeMenu === "My Request") {
-      filterQuery = `Author/EMail eq '${currentUser.Email}' and Status ne 'Paid' and Status ne 'Rejected'`;
+    if (activeMenu === "Paid") {
+      menuFilter = item.status?.toLowerCase() === "paid";
+    } else if (activeMenu === "Rejected") {
+      menuFilter = item.status?.toLowerCase() === "rejected";
+    } else if (activeMenu === "My Request") {
+      menuFilter = true;
     }
 
-    // ✅ Paid Tab
-    else if (activeMenu === "Paid") {
-      filterQuery = "Status eq 'Paid'";
+    return (
+      menuFilter &&
+      (item.id?.toLowerCase().includes(text) ||
+        item.vendor?.toLowerCase().includes(text) ||
+        item.po?.toLowerCase().includes(text)) &&
+      (!status || item.status?.toLowerCase().includes(status))
+    );
+  });
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  const paginatedData = filteredData.slice(startIndex, endIndex);
+
+  const handleViewClick = async (item: any) => {
+    try {
+      const fullItem = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(item.ID)
+        .select(
+    "*",
+    "Author/EMail"
+  )
+  .expand("Author")();
+
+      setSelectedItem(fullItem);
+      setFormType("view");
+      setShowForm(true);
+    } catch (error) {
+      console.error("View error:", error);
     }
+  };
+  // ✅ GET LIST DATA
+  const handleEditClick = async (item: any) => {
+    try {
+      const fullItem = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(item.ID)
+        .select(
+    "*",
+    "Author/EMail"
+  )
+  .expand("Author")();
 
-    // ✅ Rejected Tab
-    else if (activeMenu === "Rejected") {
-      filterQuery = "Status eq 'Rejected'";
+      setSelectedItem(fullItem);
+      setFormType("Edit");
+      setShowForm(true);
+    } catch (error) {
+      console.error("View error:", error);
     }
+  };
 
-    const items = await sp.web.lists
-      .getByTitle("CapexPayment")
-      .items.select(
-        "ID",
-        "Title",
-        "Created",
-        "EmployeeName",
-
-        // ✅ LOOKUP FIELD
-        "VendorName/Id",
-        //"VendorName/VendorCode",
-        "VendorName/VendorName",
-
-        "PONumber",
-        "RequestedAmountforPayment",
-        "Status",
-
-        // ✅ Author
-        "Author/EMail"
-      )
-      .expand("Author", "VendorName")
-      .filter(filterQuery)
-      .orderBy("ID", false)();
-
-    console.log("Items:", items);
-
-    const formatted = items.map((item: any) => ({
-      ID: item.ID,
-
-      id: item.Title,
-
-      date: item.Created
-        ? new Date(item.Created).toLocaleDateString("en-GB")
-        : "",
-
-      EmployeeName: item.EmployeeName || "",
-
-      // ✅ Vendor Details
-      vendor: item.VendorName?.VendorName || "",
-
-     // vendorCode: item.VendorName?.VendorCode || "",
-
-      po: item.PONumber || "",
-
-      amount: item.RequestedAmountforPayment || 0,
-
-      status: item.Status || "",
-    }));
-
-    setData(formatted);
-  } catch (error) {
-    console.error("Data error:", error);
-  }
-};
-
-const filteredData = data.filter((item) => {
-  const text = searchText.toLowerCase();
-  const status = statusFilter.toLowerCase();
-
-  let menuFilter = true;
-
-  // ✅ Paid
-  if (activeMenu === "Paid") {
-    menuFilter = item.status?.toLowerCase() === "paid";
-  }
-
-  // ✅ Rejected
-  else if (activeMenu === "Rejected") {
-    menuFilter = item.status?.toLowerCase() === "rejected";
-  }
-
-  // ✅ My Request
-  else if (activeMenu === "My Request") {
-    menuFilter = true;
-  }
-
-  return (
-    menuFilter &&
-    (
-      item.id?.toLowerCase().includes(text) ||
-      item.vendor?.toLowerCase().includes(text) ||
-      item.po?.toLowerCase().includes(text)
-    ) &&
-    (!status || item.status?.toLowerCase().includes(status))
-  );
-});
 
 
   
-  const handleFormOpen = async (item: any, type: "view" | "edit") => {
+  const handleFormOpen12 = async (item: any, type: "view" | "edit") => {
     try {
       const fullItem = await sp.web.lists
   .getByTitle("CapexPayment")
@@ -259,56 +220,26 @@ const filteredData = data.filter((item) => {
 
 
       setSelectedItem(fullItem);
-      setFormType(type); // ✅ dynamic
+     // setFormType(type); // ✅ dynamic
       setShowForm(true);
     } catch (error) {
       console.error(`${type} error:`, error);
     }
   };
 
-  // ✅ VIEW CLICK
-  // const handleViewClick = async (item: any) => {
-  //   try {
-  //     const fullItem = await sp.web.lists
-  //       .getByTitle("CapexPayment")
-  //       .items.getById(item.ID)
-  //       .select("*", "PICName/Title")
-  //       .expand("PICName")();
-
-  //     setSelectedItem(fullItem);
-  //     setFormType("view");
-  //     setShowForm(true);
-  //   } catch (error) {
-  //     console.error("View error:", error);
-  //   }
-  // };
-  // const handleEditClick = async (item: any) => {
-  //   try {
-  //     const fullItem = await sp.web.lists
-  //       .getByTitle("CapexPayment")
-  //       .items.getById(item.ID)
-  //       .select("*", "PICName/Title")
-  //       .expand("PICName")();
-
-  //     setSelectedItem(fullItem);
-  //     setFormType("Edit");
-  //     setShowForm(true);
-  //   } catch (error) {
-  //     console.error("View error:", error);
-  //   }
-  // };
-  // ✅ LOAD DATA
+  
   React.useEffect(() => {
-    debugger;
+    setCurrentPage(1);
+  }, [searchText, statusFilter, activeMenu]);
+  React.useEffect(() => {
     if (!context) return;
 
     void getLoggedInUser();
-    void getCapexData(); // 🔥 will run on menu change
+    void getCapexData();
   }, [context, activeMenu]);
-
   // ✅ OPEN VIEW PAGE
   if (showForm) {
-    if (formType === "view") {
+   if (formType === "view") {
       return (
         <ViewAdvanceForm
           context={context}
@@ -335,7 +266,9 @@ const filteredData = data.filter((item) => {
       );
     }
 
-    if (formType === "edit") {
+  
+
+    if (formType === "Edit") {
       return (
         <EditAdvanceForm
           context={context}
@@ -343,7 +276,7 @@ const filteredData = data.filter((item) => {
           onClose={() => {
             setShowForm(false);
             setFormType(null);
-            getCapexData();
+            void getCapexData();
           }}
         />
       );
@@ -497,24 +430,24 @@ const filteredData = data.filter((item) => {
                               alignItems: "center",
                             }}
                           >
-                            {/* VIEW */}
-                            <span
-                              onClick={() => handleFormOpen(item, "view")}
-                              style={{ cursor: "pointer" }}
-                              title="View"
-                            >
+                            {item.status !== "Draft" && (
+                              <span
+                                onClick={() => handleViewClick(item)}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <img src={View} width={15} alt="View" />
+                              </span>
+                            )}
+                            {/* <span onClick={() => handleViewClick(item)} style={{ cursor: "pointer" }}>
                               <img src={View} width={15} alt="View" />
-                            </span>
-
-                            {/* EDIT */}
+                            </span> */}
                             {(item.status === "Draft" ||
                               item.status === "Send Back") && (
                               <span
-                                onClick={() => handleFormOpen(item, "edit")}
+                                onClick={() => handleEditClick(item)}
                                 style={{ cursor: "pointer" }}
-                                title="Edit"
                               >
-                                <img src={Edit} width={15} alt="Edit" />
+                                <img src={Edit} width={15} alt="View" />
                               </span>
                             )}
                           </div>
@@ -536,6 +469,33 @@ const filteredData = data.filter((item) => {
                   )}
                 </tbody>
               </table>
+               <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginTop: "15px",
+                  }}
+                >
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                  >
+                    Previous
+                  </button>
+
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
             </div>
           </div>
         </main>

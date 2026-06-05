@@ -8,7 +8,8 @@ import logo from "../assets/SonaPNGLogo.png";
 import Edit from "../assets/Pencil.png";
 import User from "../assets/Userlogo.png";
 //import "../assets/bootstrap/css/bootstrap.css";
-
+import View from "../assets/Eye.png";
+import ViewAdvanceForm from "./ViewAdvanceForm";
 import { spfi } from "@pnp/sp";
 import { SPFx } from "@pnp/sp/presets/all";
 
@@ -24,6 +25,9 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
   const [formType, setFormType] = useState<
     "approve" | "approveUTR" | "view" | null
   >(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
 
   const [activeMenu, setActiveMenu] = React.useState("My Request");
   const [searchText, setSearchText] = React.useState("");
@@ -120,28 +124,88 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
       console.error("User error:", error);
     }
   };
+
   const handleApproveClick = async (item: any) => {
+  debugger;
     try {
       const fullItem = await sp.web.lists
         .getByTitle("CapexPayment")
         .items.getById(item.ID)
-        .select("*", "PICName/Title")
-        .expand("PICName")();
+        .select(
+    "*",
+    "Author/EMail"
+  )
+  .expand("Author")();
 
       setSelectedItem(fullItem);
-
-      // 🔥 CONDITION BASED ROUTING
-      if (item.status === "Pending for PF Approver") {
+       if (item.status === "Pending for PF Approver") {
         setFormType("approve");
       } else if (item.status === "Pending for PF Approver UTR") {
         setFormType("approveUTR");
       }
 
+      //setFormType("approve");
       setShowForm(true);
     } catch (error) {
-      console.error("Approve error:", error);
+      console.error("View error:", error);
     }
   };
+  const handleViewClick = async (item: any) => {
+    try {
+      const fullItem = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(item.ID)
+        .select(
+    "*",
+    "Author/EMail"
+  )
+  .expand("Author")();
+
+      setSelectedItem(fullItem);
+      setFormType("view");
+      setShowForm(true);
+    } catch (error) {
+      console.error("View error:", error);
+    }
+  };
+  // const handleViewClick = async (item: any) => {
+  //   try {
+  //     debugger;
+  //     const fullItem = await sp.web.lists
+  //       .getByTitle("CapexPayment")
+  //       .items.getById(item.ID)
+  //       .select("*", "PICName/Title")
+  //       .expand("PICName")();
+
+  //     setSelectedItem(fullItem);
+      
+  //     setShowForm(true);
+  //   } catch (error) {
+  //     console.error("View error:", error);
+  //   }
+  // };
+  // const handleApproveClick = async (item: any) => {
+  //   try {
+  //     const fullItem = await sp.web.lists
+  //       .getByTitle("CapexPayment")
+  //       .items.getById(item.ID)
+  //       .select("*", "PICName/Title")
+  //       .expand("PICName")();
+
+  //     setSelectedItem(fullItem);
+
+  //     // 🔥 CONDITION BASED ROUTING
+  //     if (item.status === "Pending for PF Approver") {
+  //       setFormType("approve");
+  //     } else if (item.status === "Pending for PF Approver UTR") {
+  //       setFormType("approveUTR");
+  //     }
+
+  //     setShowForm(true);
+  //   } catch (error) {
+  //     console.error("Approve error:", error);
+  //   }
+  // };
   const getCapexData = async () => {
     try {
       const currentUser = await sp.web.currentUser();
@@ -216,6 +280,13 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
       (!status || item.status?.toLowerCase().includes(status))
     );
   });
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  const paginatedData = filteredData.slice(startIndex, endIndex);
   React.useEffect(() => {
     if (!context) return;
     void getLoggedInUser();
@@ -223,6 +294,7 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
   }, [context]);
 
   if (showForm && selectedItem) {
+
     if (formType === "approve") {
       return (
         <APperformerAdvanceform
@@ -242,6 +314,20 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
         />
       );
     }
+
+    if (formType === "view") {
+          return (
+            <ViewAdvanceForm
+              context={context}
+              formData={selectedItem}
+              onClose={() => {
+                setShowForm(false);
+                setFormType(null);
+                void getCapexData();
+              }}
+            />
+          );
+        }
   }
 
   return (
@@ -369,7 +455,30 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
                   ) : (
                     filteredData.map((item, i) => (
                       <tr key={i}>
-                        <td className="px-4 py-2">
+                         <td className="px-4 py-2">
+                          {(activeMenu === "Paid" ||
+                            activeMenu === "Rejected") && (
+                            <span
+                              onClick={() => handleViewClick(item)}
+                              style={{ cursor: "pointer", marginRight: "10px" }}
+                            >
+                              <img src={View} width={15} alt="View" />
+                            </span>
+                          )}
+
+                          {activeMenu === "My Request" &&
+                            (item.status === "Pending for PF Approver" ||
+                              item.status ===
+                                "Pending for PF Approver UTR") && (
+                              <span
+                                onClick={() => handleApproveClick(item)}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <img src={Edit} width={15} alt="Edit" />
+                              </span>
+                            )}
+                        </td>
+                        {/* <td className="px-4 py-2">
                           {(item.status === "Pending for PF Approver" ||
                             item.status === "Pending for PF Approver UTR") && (
                               <span
@@ -387,7 +496,7 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
                                 <img src={Edit} width={15} alt="Action" />
                               </span>
                             )}
-                        </td>
+                        </td> */}
                         <td className="px-4 py-2">{item.id}</td>
                         <td className="px-4 py-2">{item.date}</td>
                         <td className="px-4 py-2">{item.EmployeeName}</td>
@@ -405,6 +514,33 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
                   )}
                 </tbody>
               </table>
+               <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginTop: "15px",
+                  }}
+                >
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                  >
+                    Previous
+                  </button>
+
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
             </div>
           </div>
         </main>
