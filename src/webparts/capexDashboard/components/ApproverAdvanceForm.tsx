@@ -24,7 +24,8 @@ interface IVendor {
 const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
   const sp = spfi().using(SPFx(context));
   const [selectedVendorCode, setSelectedVendorCode] = useState("");
-
+const actionLock = React.useRef(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [employee, setEmployee] = React.useState<any>({});
   const [selectedVendorName, setSelectedVendorName] = useState("");
   //const [itemData, setItemData] = useState<any>(null);
@@ -276,6 +277,8 @@ const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
           "Status",
           "CurrentApproverId",
           "CapexId",
+          "InstallationDetails",
+          "FinalPaymentAgainstPO",
           "ApprovalMatrix",
           "WorkflowHistory",
           
@@ -362,9 +365,9 @@ const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
   }, [selectedVendorId]);
 
   const handleApprove = async () => {
-    //// if (actionLock.current) return;
+     if (actionLock.current) return;
 
-    //actionLock.current = true;
+    actionLock.current = true;
 
     debugger;
     try {
@@ -452,7 +455,7 @@ const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
       alert("Approved successfully ✅");
 
       window.location.href =
-        "https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/OpexAdvancedForm.aspx?page=Approver";
+        "https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=Approver";
     } catch (error) {
       console.error(error);
       alert("Error ❌");
@@ -460,6 +463,10 @@ const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
 
       //setIsProcessing(false);
     }
+    finally {
+    //actionLock.current = false;
+      setIsProcessing(false);
+  }
   };
 
   const handleApprove1 = async () => {
@@ -607,11 +614,14 @@ const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
 
   // ✅ Sent Back
   const handleSendBack = async () => {
+     if (actionLock.current) return;
+   // actionLock.current = true;
+    setIsProcessing(true);
     try {
       if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
         //actionLock.current = false;
-
+setIsProcessing(false);
         return;
       }
       const flow = itemData.ApprovalMatrix
@@ -677,10 +687,17 @@ const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
       console.error(error);
       alert("Error ❌");
     }
+     finally {
+    //actionLock.current = false;
+      setIsProcessing(false);
+  }
   };
 
   // ✅ Reject
   const handleReject = async () => {
+     if (actionLock.current) return;
+   // actionLock.current = true;
+    setIsProcessing(true);
     try {
       if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
@@ -739,6 +756,10 @@ const ApproverAdvanceForm: React.FC<IProps> = ({ context, itemId }) => {
       console.error(error);
       alert("Error ❌");
     }
+     finally {
+    //actionLock.current = false;
+      setIsProcessing(false);
+  }
   };
   const handleExit = () => {
     window.location.href = `https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=Approver`;

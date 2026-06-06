@@ -12,16 +12,18 @@ import { IPeoplePickerContext } from "@pnp/spfx-controls-react/lib/PeoplePicker"
 import logo from "../assets/sona-comstarlogo.png";
 interface IProps {
   context: any;
-  formData: any;        // ✅ ADD THIS
-  onClose: () => void;  // ✅ ADD THIS (if not present)
+  itemId: number; 
 }
 interface IVendor {
   Id: number;
   VendorCode: string;
   VendorName: string;
 }
-const APperformerAdvanceFormForUTR: React.FC<IProps> = ({ context, formData, onClose }) => {
-
+const APperformerAdvanceFormForUTR: React.FC<IProps> = ({
+  context,
+  itemId,
+}) => {const actionLock = React.useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const sp = spfi().using(SPFx(context));
   const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<any[]>([]);
@@ -137,74 +139,124 @@ const getLoggedInUser = async () => {
     }
   };
   // ✅ Fetch Item by ID
-  const getItemById = async () => {
+  
+  const getItemById = async (itemId: any) => {
     try {
-
+      debugger;
+      console.log("Fetching item with ID:", itemId);
 
       const item = await sp.web.lists
         .getByTitle("CapexPayment")
-        .items.getById(itemData.ID)
-        .select("*", "PICName/Title", "VendorCode/Id", "VendorCode/VendorCode")
-        .expand("PICName", "VendorCode")
-        // 👈 ADD
-        ();
+        .items.getById(itemId)
+        .select(
+          "ID",
+          "Title",
+          "Created",
+          "EmployeeName",
+          "Email",
+          "EmployeeCode",
+          "ContactNo",
+          "EmployeeStatus",
+          "Division",
+          "Location",
+          "RM",
+          "HOD",
+          "VendorCode/Id",
+          "VendorCode/Title",
+          "VendorName",
+          "PODate",
+          "POPaymentTerms",
+          "POAmount",
+          "MRNNumber",
+          "MRNDtae",
+          "MRNAmountwithGST",
+          "PONumber",
+          "RequestedAmountforPayment",
+          "Status",
+          "CurrentApproverId",
+          "CapexId",
+          "VoucherDate",
+          "VoucherNumber",
+          "ApproverRemarks",
+           "InstallationDetails",
+          "FinalPaymentAgainstPO",
+          "ApprovalMatrix",
+          "WorkflowHistory",
+          
+         "RequestorName"
 
+        )();
 
+      console.log("ITEM DATA:", item.RequestorName);
+      debugger;
       setItemData(item);
-      setApproverRemarks(item.ApproverRemarks || "");
+      debugger;
 
-      // ✅ FIX: Set VendorId + Name
-      setSelectedVendorId(item.VendorCode?.Id || null);
-      // 🔥 IMPORTANT
-      setSelectedVendorName(item.VendorName); // optional
+      const vendorId = item?.VendorCode?.Id || null;
 
-      // ✅ FETCH ATTACHMENTS
-      if (item.CapexID) {
-        await getAttachments(item.CapexID);
+      console.log("Vendor Id:", vendorId);
+
+      setSelectedVendorId(vendorId);
+
+      setSelectedVendorName(item?.VendorName || "");
+
+      if (item.CapexId) {
+        await getAttachments(item.CapexId);
       }
-      // ✅ Approval Matrix
+
       if (item.ApprovalMatrix) {
         try {
-          setApprovalMatrix(JSON.parse(item.ApprovalMatrix));
+          const parsed =
+            typeof item.ApprovalMatrix === "string"
+              ? JSON.parse(item.ApprovalMatrix)
+              : item.ApprovalMatrix;
+
+          setApprovalMatrix(Array.isArray(parsed) ? parsed : []);
         } catch (e) {
           console.error("ApprovalMatrix parse error", e);
+          setApprovalMatrix([]);
         }
+      } else {
+        setApprovalMatrix([]);
       }
 
-      // ✅ Workflow History
       if (item.WorkflowHistory) {
         try {
-          setWorkflowHistory(JSON.parse(item.WorkflowHistory));
+          const parsed =
+            typeof item.WorkflowHistory === "string"
+              ? JSON.parse(item.WorkflowHistory)
+              : item.WorkflowHistory;
+
+          setWorkflowHistory(Array.isArray(parsed) ? parsed : []);
         } catch (e) {
-          console.error("WorkflowHistory parse error", e);
+          console.error("WorkFlowHistory parse error", e);
+          setWorkflowHistory([]);
         }
+      } else {
+        setWorkflowHistory([]);
       }
     } catch (error) {
       console.error("Fetch error:", error);
     }
   };
 
-  useEffect(() => {
-    if (!formData) return;
-  
-    setItemData(formData);
-    setApproverRemarks(formData.ApproverRemarks || "");
-  
-    // ✅ Workflow History
-    if (formData.WorkflowHistory) {
-      try {
-        setWorkflowHistory(JSON.parse(formData.WorkflowHistory));
-      } catch {
-        setWorkflowHistory([]);
-      }
-    }
-  
-    // 🔥 ADD THIS LINE (MAIN FIX)
-    if (formData.Title) {
-      getAttachments(formData.Title);
-    }
-  
-  }, [formData]);
+useEffect(() => {
+    if (!context || !itemId) return;
+    debugger;
+    const loadData = async () => {
+      debugger;
+
+      await getLoggedInUser();
+
+      
+      await getVendors();
+
+     
+      await getItemById(itemId);
+    };
+
+    void loadData();
+  }, [context, itemId]);
 
   useEffect(() => {
     if (selectedVendorId) {
@@ -216,28 +268,34 @@ const getLoggedInUser = async () => {
 
   // ✅ Approve
   const handleApprove = async () => {
+
+     if (actionLock.current) return;
+
+    // actionLock.current = true;
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
        if (!UTRDate || UTRDate.trim() === "") {
         alert("Please enter UTR Date");
-       
+       setIsSubmitting(false);
         return;
       }
        if (UTRDate > localDate) {
       alert("UTR date cannot be a future date");
       // return;
-       
+       setIsSubmitting(false);
         return;
     }
 
       if (!UTRNumber || UTRNumber.trim() === "") {
         alert("Please enter UTR Number");
-        
+        setIsSubmitting(false);
         return;
       }
 
       if (!UTRRemarks || UTRRemarks.trim() === "") {
         alert("Please enter UTR Remarks");
-       
+       setIsSubmitting(false);
         return;
       }
 
@@ -284,14 +342,20 @@ const getLoggedInUser = async () => {
       console.error("Approve error:", error);
       alert("Error ❌");
     }
+    finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ✅ Sent Back
   const handleSendBack = async () => {
+     if (actionLock.current) return;
+    // actionLock.current = true;
+    if (isSubmitting) return;
     try {
      if (!UTRRemarks || UTRRemarks.trim() === "") {
         alert("Please enter UTR Remarks");
-       
+       setIsSubmitting(false);
         return;
       }
 
@@ -343,14 +407,20 @@ const getLoggedInUser = async () => {
     } catch (error) {
       console.error(error);
     }
+    finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ✅ Reject
   const handleReject = async () => {
+     if (actionLock.current) return;
+    // actionLock.current = true;
+    if (isSubmitting) return;
     try {
       if (!UTRRemarks || UTRRemarks.trim() === "") {
         alert("Please enter UTR Remarks");
-       
+        setIsSubmitting(false);
         return;
       }
 
@@ -402,6 +472,9 @@ const getLoggedInUser = async () => {
     } catch (error) {
       console.error(error);
     }
+      finally { 
+      setIsSubmitting(false);
+  }
   };
 
   const handleExit = () => {
@@ -522,11 +595,11 @@ const getLoggedInUser = async () => {
                   </div>
                   <div className="col-md-4">
                     <label className="font">PO Terms </label> : &nbsp;&nbsp;
-                    <label className="fonttext "> {itemData.POAdvanceTerms}</label>
+                    <label className="fonttext "> {itemData.POPaymentTerms}</label>
                   </div>
                   <div className="col-md-4">
                     <label className="font">PO Amount </label> : &nbsp;&nbsp;
-                    <label className="fonttext "> {itemData.POAmtGST}</label>
+                    <label className="fonttext "> {itemData.POAmount}</label>
                   </div>
                 </div>
               </div>
@@ -549,6 +622,46 @@ const getLoggedInUser = async () => {
                   <div className="col-md-4">
                     <label className="font">Voucher Number</label>
                     <input value={itemData.VoucherNumber || ""} className="font-control readonly" />
+                  </div>
+                </div>
+              </div>
+
+                <div className="heading1" style={{ marginTop: "10px" }}>
+                <label>MRN & Payment Details </label> : &nbsp;&nbsp;
+              </div>
+
+              <div className="main-formcontainer">
+                <div className="row mb-20">
+                  <div className="col-md-4">
+                    <label className="font">MRN Number </label> : &nbsp;&nbsp;
+                    <label className="fonttext">{itemData?.MRNNumber}</label>
+                  </div>
+
+                  <div className="col-md-4">
+                    <label className="font">MRN Date</label> : &nbsp;&nbsp;
+                    <label className="fonttext">
+                      {itemData?.MRNDtae
+                        ? new Date(itemData.MRNDtae).toLocaleDateString("en-GB")
+                        : ""}
+                    </label>
+                    {/* <label className="fonttext">{itemData?.mrnDate}</label> */}
+                  </div>
+
+                  <div className="col-md-4">
+                    <label className="font">MRN Amount</label> : &nbsp;&nbsp;
+                    <label className="fonttext">
+                      {itemData?.MRNAmountwithGST}
+                    </label>
+                  </div>
+                </div>
+
+                <div className="row mb-20">
+                  <div className="col-md-4">
+                    <label className="font">Requested Amount</label> :
+                    &nbsp;&nbsp;
+                    <label className="fonttext">
+                      {itemData?.RequestedAmountforPayment}
+                    </label>
                   </div>
                 </div>
               </div>
@@ -668,17 +781,26 @@ const getLoggedInUser = async () => {
               <div className='row my-3'>
                 <div className='col-md-12'>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
-                    <a className="submit-btn" onClick={handleApprove}>
-                      Paid
-                    </a>
+                   <a
+                          className={`submit-btn ${isSubmitting ? "disabled-btn" : ""}`}
+                          onClick={!isSubmitting ? handleApprove : undefined}
+                        >
+                          {isSubmitting ? "Processing..." : "Paid"}
+                        </a>
 
-                    <a className="Rework-btn" onClick={handleSendBack}>
-                      Send Back
-                    </a>
+                        <a
+                          className={`Rework-btn ${isSubmitting ? "disabled-btn" : ""}`}
+                          onClick={!isSubmitting ? handleSendBack : undefined}
+                        >
+                          {isSubmitting ? "Processing..." : "Send Back"}
+                        </a>
 
-                    <a className="Reject-btn" onClick={handleReject}>
-                      Reject
-                    </a>
+                        <a
+                          className={`Reject-btn ${isSubmitting ? "disabled-btn" : ""}`}
+                          onClick={!isSubmitting ? handleReject : undefined}
+                        >
+                          {isSubmitting ? "Processing..." : "Reject"}
+                        </a>
                     <a href="#" onClick={handleExit} className="reset-btn">
                       Exit
                     </a>

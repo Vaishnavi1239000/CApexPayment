@@ -71,7 +71,7 @@ export default function CapexDashboard(props: ICapexDashboardProps) {
                       <span className="boximage">
                         <img src={UserLogo} width="25" height="25" />
                       </span>
-                      <h4>User Dasboard</h4>
+                      <h4>User Dashboard</h4>
                     </div>
                   </div>
                 </div>
@@ -81,7 +81,7 @@ export default function CapexDashboard(props: ICapexDashboardProps) {
                       <span className="boximage">
                         <img src={ApproverLogo} width="25" height="25" />
                       </span>
-                      <h4>Approver Dasboard</h4>
+                      <h4>Approver Dashboard</h4>
                     </div>
                   </div>
                 </div>
@@ -91,7 +91,7 @@ export default function CapexDashboard(props: ICapexDashboardProps) {
                       <span className="boximage">
                         <img src={ApLogo} width="25" height="25" />
                       </span>
-                      <h4>Ap Performer Dasboard</h4>
+                      <h4>Ap Performer Dashboard</h4>
                     </div>
                   </div>
                 </div>

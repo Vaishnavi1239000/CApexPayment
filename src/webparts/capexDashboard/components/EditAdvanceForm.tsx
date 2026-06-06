@@ -2,7 +2,7 @@ import * as React from "react";
 import "./advanced.scss";
 import { spfi } from "@pnp/sp";
 import { SPFx } from "@pnp/sp/presets/all";
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import {
   PeoplePicker,
   PrincipalType,
@@ -23,6 +23,8 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   // STATES
   // =========================
    const today = new Date();
+   const submitRef = useRef(false);
+     const draftRef = useRef(false);
   const localDate: string = new Date(
   today.getTime() - today.getTimezoneOffset() * 60000
 )
@@ -44,7 +46,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   const [requestedAmount, setRequestedAmount] = useState("");
 
   // 🔥 FINAL PAYMENT
-  const [finalPayment, setFinalPayment] = useState(false);
+  const [finalPayment, setFinalPayment] = useState("");
   const [installationDetails, setInstallationDetails] = useState("");
 
   const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
@@ -209,6 +211,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     if (isDraftSaving) return;
 
     setIsDraftSaving(true);
+    
 
     try {
       debugger;
@@ -453,6 +456,10 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     if (!mrnDate || mrnDate === "Invalid Date") {
       errors.push("Please select MRN Date");
     }
+     if (mrnDate > localDate) {
+      errors.push("MRN date cannot be a future date");
+      // return;
+    }
 
     if (!mrnAmount || mrnAmount.trim() === "") {
       errors.push("Please enter MRN Amount");
@@ -497,9 +504,10 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   // UPDATE
   // =========================
   const handleSubmit = async () => {
-    if (isSubmitting) return;
+   if (submitRef.current) return;
 
-    setIsSubmitting(true);
+  //submitRef.current = true;
+  setIsSubmitting(true);
 
     try {
       const errors = validateForm();
@@ -534,7 +542,12 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         Date: new Date().toISOString(),
       });
       const currentApproverId = formData.CurrentApproverId || null;
-      await sp.web.lists.getByTitle("CapexPayment").items.add({
+
+      await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(formData.ID)
+        .update({
+     
         Title: formData.CapexId,
         CapexId: formData.CapexId,
 
@@ -600,6 +613,8 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       console.error("SP ERROR:", error?.data?.responseBody);
       alert(error?.data?.responseBody || "Error while saving ❌");
     } finally {
+      submitRef.current = false;
+    
       setIsSubmitting(false);
     }
   };
@@ -626,8 +641,8 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     setRequestedAmount(formData.RequestedAmountforPayment || "");
 
     // ✅ Boolean → Yes/No
-    //setFinalPayment(formData.FinalPaymentAgainstPO ? "Yes" : "No");
-
+    setFinalPayment(formData.FinalPaymentAgainstPO ? "Yes" : "No");
+ 
     setInstallationDetails(formData.InstallationDetails || "");
 
     // setApproverRemarks(formData.ApproverRemarks || "");
@@ -934,6 +949,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                     <input
                       type="date"
                       value={mrnDate}
+                       max={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setMrnDate(e.target.value)}
                       className="form-control"
                     />
@@ -977,9 +993,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                     <span className="required">*</span>
                     <select
                       value={finalPayment ? "Yes" : "No"}
-                      onChange={(e) =>
-                        setFinalPayment(e.target.value === "Yes")
-                      }
+                      onChange={(e) => setFinalPayment(e.target.value)}
                       className="formtext-control"
                     >
                       <option value="No">No</option>
@@ -1257,19 +1271,33 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                   margin: "10px",
                 }}
               >
-                <a
+                <button
+                  type="button"
                   onClick={!isSubmitting ? handleSubmit : undefined}
-                  className={`submit-btn ${isSubmitting ? "disabled-btn" : ""}`}
+                  disabled={isSubmitting}
+                  className="submit-btn"
+                  style={{
+                    pointerEvents: isSubmitting ? "none" : "auto",
+                    opacity: isSubmitting ? 0.6 : 1,
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                  }}
                 >
                   {isSubmitting ? "Submitting..." : "Submit"}
-                </a>
-
-                <a
+                </button>
+                <button
+                  type="button"
                   onClick={!isDraftSaving ? handledraft : undefined}
-                  className={`Rework-btn ${isDraftSaving ? "disabled-btn" : ""}`}
+                  disabled={isDraftSaving}
+                  className="Rework-btn"
+                  style={{
+                    pointerEvents: isDraftSaving ? "none" : "auto",
+                    opacity: isDraftSaving ? 0.6 : 1,
+                    cursor: isDraftSaving ? "not-allowed" : "pointer",
+                  }}
                 >
                   {isDraftSaving ? "Saving..." : "Save as Draft"}
-                </a>
+                </button>
+
                 <a href="#" onClick={handleExit} className="reset-btn">
                   Exit
                 </a>

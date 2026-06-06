@@ -2,7 +2,7 @@ import * as React from "react";
 import "./advanced.scss";
 import { spfi } from "@pnp/sp";
 import { SPFx } from "@pnp/sp/presets/all";
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 //import { Link, useHistory } from "react-router-dom";
 import {
   PeoplePicker,
@@ -21,7 +21,8 @@ interface IVendor {
 
 const NewAdvanceform = ({ context }: any) => {
   // const history = useHistory();
-
+const submitRef = useRef(false);
+  const draftRef = useRef(false);
   const sp = spfi().using(SPFx(context));
   const today = new Date();
   const localDate: string = new Date(
@@ -220,8 +221,7 @@ const NewAdvanceform = ({ context }: any) => {
       return `CPX-PYMT/${getFinancialYear()}/00001`;
     }
   };
-
-  const uploadAttachments = async (capexId: string) => {
+const uploadAttachments = async (capexId: string) => {
     try {
       if (!attachments || attachments.length === 0) return;
 
@@ -232,21 +232,46 @@ const NewAdvanceform = ({ context }: any) => {
 
       const folderPath = `${webUrl}/${libraryName}/${safeCapexId}`;
 
-      // ✅ Ensure folder
       await sp.web.folders.addUsingPath(`${libraryName}/${safeCapexId}`);
 
-      // ✅ Upload files properly
       for (const file of attachments) {
         await sp.web
           .getFolderByServerRelativePath(folderPath)
           .files.addUsingPath(file.name, file, { Overwrite: true });
       }
 
-      console.log("✅ Files uploaded successfully");
+      console.log("Files uploaded successfully");
     } catch (error) {
       console.error("❌ Upload error:", error);
     }
   };
+  // const uploadAttachments = async (capexId: string) => {
+  //   try {
+  //     if (!attachments || attachments.length === 0) return;
+
+  //     const safeCapexId = capexId.replace(/\//g, "_");
+
+  //     const libraryName = "CapexPaymentDocs";
+  //     const webUrl = context.pageContext.web.serverRelativeUrl;
+
+  //     const folderPath = `${webUrl}/${libraryName}/${safeCapexId}`;
+
+  //     // ✅ Ensure folder
+  //     await sp.web.folders.addUsingPath(`${libraryName}/${safeCapexId}`);
+
+  //     // ✅ Upload files properly
+  //     for (const file of attachments) {
+  //       await sp.web
+  //         .getFolderByServerRelativePath(folderPath)
+  //         .files.addUsingPath(file.name, file, { Overwrite: true });
+  //     }
+
+  //     console.log("✅ Files uploaded successfully");
+  //   } catch (error) {
+  //     console.error("❌ Upload error:", error);
+  //   }
+  // };
+  // 
   const buildApprovalPreview = async (employee: any) => {
     const flow: any[] = [];
 
@@ -372,6 +397,10 @@ const NewAdvanceform = ({ context }: any) => {
     if (!mrnDate || mrnDate === "Invalid Date") {
       errors.push("Please select MRN Date");
     }
+     if (mrnDate > localDate) {
+      errors.push("MRN date cannot be a future date");
+      // return;
+    }
 
     if (!mrnAmount || mrnAmount.trim() === "") {
       errors.push("Please enter MRN Amount");
@@ -409,8 +438,9 @@ const NewAdvanceform = ({ context }: any) => {
 
   const handleSubmit = async () => {
     debugger;
-    if (isSubmitting) return;
+   if (submitRef.current) return;
 
+    //submitRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -521,8 +551,8 @@ const NewAdvanceform = ({ context }: any) => {
   };
 
   const handledraft = async () => {
-    if (isDraftSaving) return;
-
+   
+ if (draftRef.current) return;
     setIsDraftSaving(true);
 
     try {
@@ -612,6 +642,9 @@ const NewAdvanceform = ({ context }: any) => {
       const safeCapexId = capexId.replace(/\//g, "_");
       void uploadAttachments(safeCapexId);
 
+
+      
+
       alert("Draft saved successfully ✅");
 
       window.location.href =
@@ -621,6 +654,7 @@ const NewAdvanceform = ({ context }: any) => {
       alert("Error while saving ❌");
     }
     finally {
+      draftRef.current = false;
       setIsDraftSaving(false);
     }
   };
@@ -847,6 +881,7 @@ const NewAdvanceform = ({ context }: any) => {
                     <input
                       type="date"
                       value={mrnDate}
+                       max={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setMrnDate(e.target.value)}
                       className="form-control"
                     />
@@ -1069,15 +1104,37 @@ const NewAdvanceform = ({ context }: any) => {
               <div className='row my-3' >
                 <div className='col-md-12'>
                   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
-                    <a onClick={!isSubmitting ? handleSubmit : undefined} className={`submit-btn ${isSubmitting ? "disabled-btn" : ""}`}>
+                    <button
+                      type="button"
+                      onClick={!isSubmitting ? handleSubmit : undefined}
+                      disabled={isSubmitting}
+                      className="submit-btn"
+                      style={{
+                        pointerEvents: isSubmitting ? "none" : "auto",
+                        opacity: isSubmitting ? 0.6 : 1,
+                        cursor: isSubmitting ? "not-allowed" : "pointer",
+                      }}
+                    >
                       {isSubmitting ? "Submitting..." : "Submit"}
-                    </a>
-                    <a onClick={!isDraftSaving ? handledraft : undefined} className={`Rework-btn ${isDraftSaving ? "disabled-btn" : ""}`}>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={!isDraftSaving ? handledraft : undefined}
+                      disabled={isDraftSaving}
+                      className="Rework-btn"
+                      style={{
+                        pointerEvents: isDraftSaving ? "none" : "auto",
+                        opacity: isDraftSaving ? 0.6 : 1,
+                        cursor: isDraftSaving ? "not-allowed" : "pointer",
+                      }}
+                    >
                       {isDraftSaving ? "Saving..." : "Save as Draft"}
-                    </a>
+                    </button>
                     <a href="#" onClick={handleExit} className="reset-btn">
                       Exit
                     </a>
+                 
+                   
                   </div>
                 </div>
               </div>

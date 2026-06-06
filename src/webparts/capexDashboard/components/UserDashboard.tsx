@@ -82,38 +82,82 @@ const [currentPage, setCurrentPage] = useState(1);
 
       console.log("Filter Query:", filterQuery);
 
-      const items = await sp.web.lists
-        .getByTitle("CapexPayment")
-        .items.select(
-          "ID",
-          "Title",
-          "Created",
-          "EmployeeName",
-          "VendorName",
-          //"VendorCode/Id",
-          //"VendorCode/VendorCode",
-          "PONumber",
-          "RequestedAmountforPayment",
-          "Status",
-          "Author/Id",
-        )
-        .expand( "Author")
-        .filter(filterQuery)
-        .orderBy("ID", false)();
+      // const items = await sp.web.lists
+      //   .getByTitle("CapexPayment")
+      //   .items.select(
+      //     "ID",
+      //     "Title",
+      //     "Created",
+      //     "EmployeeName",
+      //     "VendorName",
+      //     //"VendorCode/Id",
+      //     //"VendorCode/VendorCode",
+      //     "PONumber",
+      //     "RequestedAmountforPayment",
+      //     "Status",
+      //     "Author/Id",
+      //   )
+      //   .expand( "Author")
+      //   .filter(filterQuery)
+      //   .orderBy("ID", false)();
 
-      const formatted = items.map((item: any) => ({
-        ID: item.ID,
-        id: item.Title,
-        date: item.Created
-          ? new Date(item.Created).toLocaleDateString("en-GB")
-          : "",
-        EmployeeName: item.EmployeeName,
-        vendor: item.VendorName || "",
-       // vendorCode: item.VendorCode?.VendorCode || "",
-        po: item.PONumber || "",
-        amount: item.RequestedAmountforPayment || 0,
-        status: item.Status || "",
-      }));
+      // const formatted = items.map((item: any) => ({
+      //   ID: item.ID,
+      //   id: item.Title,
+      //   date: item.Created
+      //     ? new Date(item.Created).toLocaleDateString("en-GB")
+      //     : "",
+      //   EmployeeName: item.EmployeeName,
+      //   vendor: item.VendorName || "",
+      //  // vendorCode: item.VendorCode?.VendorCode || "",
+      //   po: item.PONumber || "",
+      //   amount: item.RequestedAmountforPayment || 0,
+      //   status: item.Status || "",
+      // }));
+
+      const items = await sp.web.lists
+      .getByTitle("CapexPayment")
+      .items.select(
+        "*",
+        "ID",
+        "Title",
+        "Created",
+        "EmployeeName",
+        "VendorName",
+        "VendorCode",
+        "PONumber",
+        "RequestedAmountforPayment",
+        "Status",
+        "CurrentApproverId",
+        "Author/EMail"
+      )
+      .expand("Author")
+      .filter(filterQuery)
+      .orderBy("ID", false)();
+
+    const formatted = items.map((item: any) => ({
+
+      ID: item.ID,
+
+      id: item.Title,
+
+      date: item.Created
+        ? new Date(item.Created).toLocaleDateString("en-GB")
+        : "",
+
+      EmployeeName: item.EmployeeName || "",
+
+      vendor: item.VendorName || "",
+
+      vendorCode: item.VendorCode || "",
+
+      po: item.PONumber || "",
+
+      amount: item.RequestedAmountforPayment || 0,
+
+      status: item.Status || "",
+
+    }));
 
       setData(formatted);
     } catch (error) {

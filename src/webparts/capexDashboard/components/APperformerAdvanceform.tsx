@@ -12,17 +12,21 @@ import { IPeoplePickerContext } from "@pnp/spfx-controls-react/lib/PeoplePicker"
 import logo from "../assets/sona-comstarlogo.png";
 interface IProps {
   context: any;
-  formData: any;        // ✅ ADD THIS
-  onClose: () => void;  // ✅ ADD THIS (if not present)
+  itemId: number; 
 }
 interface IVendor {
   Id: number;
   VendorCode: string;
   VendorName: string;
 }
-const APperformerAdvanceform: React.FC<IProps> = ({ context, formData, onClose }) => {
+const APperformerAdvanceform: React.FC<IProps> = ({ context, itemId }) => {
 
   const sp = spfi().using(SPFx(context));
+const [isSubmitting, setIsSubmitting] = useState(false);
+const [mrnNumber, setMrnNumber] = useState("");
+  const [mrnDate, setMrnDate] = useState("");
+  const [mrnAmount, setMrnAmount] = useState("");
+  const actionLock = React.useRef(false);
   const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
   const today = new Date();
 const localDate: string = new Date(
@@ -132,36 +136,123 @@ const localDate: string = new Date(
       void setAttachments([]);
     }
   };
-  // ✅ Fetch Item by ID
 
-  useEffect(() => {
-    if (!formData) return;
+  const getItemById = async (itemId: any) => {
+    try {
+      debugger;
+      console.log("Fetching item with ID:", itemId);
 
-    setItemData(formData);
-    setApproverRemarks(formData.ApproverRemarks || "");
+      const item = await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(itemId)
+        .select(
+          "ID",
+          "Title",
+          "Created",
+          "EmployeeName",
+          "Email",
+          "EmployeeCode",
+          "ContactNo",
+          "EmployeeStatus",
+          "Division",
+          "Location",
+          "RM",
+          "HOD",
+          "VendorCode/Id",
+          "VendorCode/Title",
+          "VendorName",
+          "PODate",
+           "InstallationDetails",
+          "FinalPaymentAgainstPO",
+          "POPaymentTerms",
+          "POAmount",
+          "MRNNumber",
+          "MRNDtae",
+          "MRNAmountwithGST",
+          "PONumber",
+          "RequestedAmountforPayment",
+          "Status",
+          "CurrentApproverId",
+          "CapexId",
+          "ApprovalMatrix",
+          "WorkflowHistory",
+          
+         "RequestorName"
 
-    // ✅ Workflow History
-    if (formData.WorkflowHistory) {
-      try {
-        setWorkflowHistory(formData.WorkflowHistory);
-      } catch {
-        setWorkflowHistory([]);
+        )();
+
+      console.log("ITEM DATA:", item.RequestorName);
+      debugger;
+      setItemData(item);
+      debugger;
+
+      const vendorId = item?.VendorCode?.Id || null;
+
+      console.log("Vendor Id:", vendorId);
+
+      setSelectedVendorId(vendorId);
+
+      setSelectedVendorName(item?.VendorName || "");
+
+      if (item.CapexId) {
+        await getAttachments(item.CapexId);
       }
-    }
-    if (formData.ApprovalMatrix) {
-      try {
-        setApprovalMatrix(formData.ApprovalMatrix);
-      } catch {
+
+      if (item.ApprovalMatrix) {
+        try {
+          const parsed =
+            typeof item.ApprovalMatrix === "string"
+              ? JSON.parse(item.ApprovalMatrix)
+              : item.ApprovalMatrix;
+
+          setApprovalMatrix(Array.isArray(parsed) ? parsed : []);
+        } catch (e) {
+          console.error("ApprovalMatrix parse error", e);
+          setApprovalMatrix([]);
+        }
+      } else {
         setApprovalMatrix([]);
       }
-    }
 
-    // 🔥 ADD THIS LINE (MAIN FIX)
-    if (formData.Title) {
-      getAttachments(formData.Title);
-    }
+      if (item.WorkflowHistory) {
+        try {
+          const parsed =
+            typeof item.WorkflowHistory === "string"
+              ? JSON.parse(item.WorkflowHistory)
+              : item.WorkflowHistory;
 
-  }, [formData]);
+          setWorkflowHistory(Array.isArray(parsed) ? parsed : []);
+        } catch (e) {
+          console.error("WorkFlowHistory parse error", e);
+          setWorkflowHistory([]);
+        }
+      } else {
+        setWorkflowHistory([]);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+    }
+  };
+
+  // ✅ Fetch Item by ID
+useEffect(() => {
+    if (!context || !itemId) return;
+    debugger;
+    const loadData = async () => {
+      debugger;
+
+      await getLoggedInUser();
+
+      
+      await getVendors();
+
+     
+      await getItemById(itemId);
+    };
+
+    void loadData();
+  }, [context, itemId]);
+
 
   useEffect(() => {
     if (selectedVendorId) {
@@ -170,31 +261,210 @@ const localDate: string = new Date(
       void getPreviousAdvances(selectedVendorId);
     }
   }, [selectedVendorId]);
+const buildApprovalFlow = async () => {
 
-  // ✅ Approve
+    const existingFlow = itemData.ApprovalMatrix
+      ? JSON.parse(itemData.ApprovalMatrix)
+      : [];
+
+    const baseApprovers = existingFlow.filter(
+      (a: any) => a.Role === "RM" || a.Role === "HOD"
+    );
+
+    const matrixData = await sp.web.lists
+      .getByTitle("CapexApprovalMatrix")
+      .items
+      .select("Role/RoleName,Approver/Id,Approver/Title,Level/Level")
+      .expand("Approver,Role,Level")
+      .filter("Status eq 'Active'")
+      .orderBy("Level", true)();
+
+    const matrixApprovers = matrixData.map((item: any, index: number) => ({
+      Id: item.Approver?.Id,
+      Name: item.Approver?.Title,
+      Role: item.Role?.RoleName,
+      Level: baseApprovers.length + index + 1,
+      Status: "Pending"
+    }));
+
+    const fullFlow = [...baseApprovers, ...matrixApprovers];
+
+    return fullFlow;
+  };
+  const mergeFlowWithStatus = (oldFlow: any[], newFlow: any[]) => {
+    return newFlow.map((newItem) => {
+      const oldItem = oldFlow.find((o) => o.Id === newItem.Id);
+
+      return {
+        ...newItem,
+        Status: oldItem?.Status || newItem.Status // 🔥 preserve status
+      };
+    });
+  };
+ 
+
   const handleApprove = async () => {
 
+    debugger;
+    if (actionLock.current) return;
+
+ // actionLock.current = true;
+    if (isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      if (!voucherDate || voucherDate.trim() === "") {
+      alert("Please enter Voucher Date");
+      //actionLock.current = false;
+      setIsSubmitting(false);
+      return;
+    }
+      if (voucherDate > localDate) {
+      alert("VoucherDate cannot be a future date");
+      // return;
+       //actionLock.current = false;
+        setIsSubmitting(false);
+        return;
+    }
+    if (!voucherNumber || voucherNumber.trim() === "") {
+      alert("Please enter Voucher Number");
+      //actionLock.current = false;
+        setIsSubmitting(false);
+      return;
+    }
+     if (!approverRemarks || approverRemarks.trim() === "") {
+      alert("Please enter Remarks");
+      //actionLock.current = false;
+        setIsSubmitting(false);
+      return;
+    }
+
+      const oldFlow = itemData.ApprovalMatrix
+        ? JSON.parse(itemData.ApprovalMatrix)
+        : [];
+
+     
+      const latestFlow = await buildApprovalFlow();
+
+      
+      const finalFlow = mergeFlowWithStatus(oldFlow, latestFlow);
+
+const flow = itemData.ApprovalMatrix
+        ? JSON.parse(itemData.ApprovalMatrix)
+        : [];
+
+      const currentUserId = context.pageContext.legacyPageContext.userId;
+
+      const currentUser = context.pageContext.user.displayName;
+
+      const currentIndex = flow.findIndex((a: any) => a.Name === currentUser);
+      if (currentIndex === -1) {
+        alert("You are not current approver");
+        //// setIsProcessing(false);
+        //actionLock.current = false;
+        return;
+      }
+
+      flow[currentIndex].Status = "Approved";
+
+      let nextApproverId = null;
+
+      if (flow[currentIndex + 1]) {
+        flow[currentIndex + 1].Status = "In Progress";
+        nextApproverId = flow[currentIndex + 1].Id;
+      }
+
+      let finalStatus = itemData.Status;
+
+      const currentRole = flow[currentIndex]?.Role;
+
+      if (currentRole === "RM") {
+        finalStatus = "Pending for Approver";
+      } else if (currentRole === "HOD") {
+        finalStatus = "Pending for PF Approver";
+      } else {
+        finalStatus = nextApproverId ? "Pending" : "Approved";
+      }
+
+      // let ApproverStatus;
+
+      // if (currentRole === "RM") {
+      //   ApproverStatus = "Pending for HOD";
+      // } else if (currentRole === "HOD") {
+      //   ApproverStatus = "Pending for PF Approver";
+      // } else {
+      //   ApproverStatus = nextApproverId ? "Pending" : "Approved";
+      // }
+
+      const history = itemData.WorkflowHistory
+        ? JSON.parse(itemData.WorkflowHistory)
+        : [];
+
+      history.push({
+        CurrentApprover: context.pageContext.user.displayName,
+        ActionTaken: "Approved",
+        Comment: approverRemarks,
+        Date: new Date().toISOString(),
+      });
+
+      await sp.web.lists
+        .getByTitle("CapexPayment")
+        .items.getById(itemData.ID)
+        .update({
+           ApproverRemarks: approverRemarks,
+
+          VoucherDate: voucherDate ? new Date(voucherDate) : null,
+          VoucherNumber: voucherNumber,
+
+          Status: "Pending for PF Approver UTR",
+
+         WorkflowHistory: JSON.stringify(history),
+          //ApprovalMatrix: JSON.stringify(flow),
+
+         // CurrentApproverId: null
+        });
+      
+      alert("Vouching details submitted successfully ");
+      
+      window.location.href =
+        "https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=Performer";
+
+    } catch (error) {
+      console.error("Approve error:", error);
+      alert("Error ❌");
+      
+    }
+     finally {
+    //actionLock.current = false;
+      setIsSubmitting(false);
+  }
+  };
+  // ✅ Approve
+  const handleApprove1 = async () => {
+if (actionLock.current) return;
+
+ // actionLock.current = true;
+    if (isSubmitting) return;
     try {
 
        if (!voucherDate || voucherDate.trim() === "") {
         alert("Please enter Voucher Date");
-        
+         setIsSubmitting(false);
         return;
       }
  if (voucherDate > localDate) {
       alert("Voucher date cannot be a future date");
-       
+        setIsSubmitting(false);
         return;
     }
       if (!voucherNumber || voucherNumber.trim() === "") {
         alert("Please enter Voucher Number");
-       
+        setIsSubmitting(false);
         return;
       }
 
       if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
-      
+       setIsSubmitting(false);
         return;
       }
 
@@ -345,16 +615,22 @@ const localDate: string = new Date(
 
       alert("Error ❌");
     }
+      finally {
+    //actionLock.current = false;
+      setIsSubmitting(false);
+  }
   };
 
   // ✅ Sent Back
   const handleSendBack = async () => {
-
+ if (actionLock.current) return;
+   // actionLock.current = true;
+    setIsSubmitting(true);
     try {
 
      if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
-      
+       setIsSubmitting(false);
         return;
       }
 
@@ -478,16 +754,22 @@ const localDate: string = new Date(
 
       alert("Error ❌");
     }
+      finally {
+    //actionLock.current = false;
+      setIsSubmitting(false);
+  }
   };
 
   // ✅ Reject
   const handleReject = async () => {
-
+ if (actionLock.current) return;
+   // actionLock.current = true;
+    setIsSubmitting(true);
     try {
 
      if (!approverRemarks || approverRemarks.trim() === "") {
         alert("Please enter Remarks");
-      
+      setIsSubmitting(false);
         return;
       }
 
@@ -599,6 +881,10 @@ const localDate: string = new Date(
 
       alert("Error ❌");
     }
+     finally {
+    //actionLock.current = false;
+      setIsSubmitting(false);
+  }
   };
   const handleExit = () => {
     window.location.href = `https://isriglobal.sharepoint.com/sites/SonaFinance/SitePages/CapexPayment.aspx?page=Performer`;
@@ -754,11 +1040,51 @@ const localDate: string = new Date(
                   </div>
                   <div className="col-md-4">
                     <label className="font">PO Terms </label> : &nbsp;&nbsp;
-                    <label className="fonttext "> {itemData.POAdvanceTerms}</label>
+                    <label className="fonttext "> {itemData.POPaymentTerms}</label>
                   </div>
                   <div className="col-md-4">
                     <label className="font">PO Amount </label> : &nbsp;&nbsp;
-                    <label className="fonttext "> {itemData.POAmtGST}</label>
+                    <label className="fonttext "> {itemData.POAmount}</label>
+                  </div>
+                </div>
+              </div>
+
+               <div className="heading1" style={{ marginTop: "10px" }}>
+                <label>MRN & Payment Details </label> : &nbsp;&nbsp;
+              </div>
+
+              <div className="main-formcontainer">
+                <div className="row mb-20">
+                  <div className="col-md-4">
+                    <label className="font">MRN Number </label> : &nbsp;&nbsp;
+                    <label className="fonttext">{itemData?.MRNNumber}</label>
+                  </div>
+
+                  <div className="col-md-4">
+                    <label className="font">MRN Date</label> : &nbsp;&nbsp;
+                    <label className="fonttext">
+                      {itemData?.MRNDtae
+                        ? new Date(itemData.MRNDtae).toLocaleDateString("en-GB")
+                        : ""}
+                    </label>
+                    {/* <label className="fonttext">{itemData?.mrnDate}</label> */}
+                  </div>
+
+                  <div className="col-md-4">
+                    <label className="font">MRN Amount</label> : &nbsp;&nbsp;
+                    <label className="fonttext">
+                      {itemData?.MRNAmountwithGST}
+                    </label>
+                  </div>
+                </div>
+
+                <div className="row mb-20">
+                  <div className="col-md-4">
+                    <label className="font">Requested Amount</label> :
+                    &nbsp;&nbsp;
+                    <label className="fonttext">
+                      {itemData?.RequestedAmountforPayment}
+                    </label>
                   </div>
                 </div>
               </div>
@@ -782,6 +1108,15 @@ const localDate: string = new Date(
                       className="form-control"
                     />
                   </div>
+
+                  <div className="col-md-4">
+                      <label className='font'>Approver Remarks</label>
+                      <textarea
+                        value={approverRemarks} className='form-control'
+                        onChange={(e) => setApproverRemarks(e.target.value)}
+                      />
+                    </div>
+
                 </div>
               </div>
               <div className="heading1" style={{ marginTop: "10px" }}>
@@ -906,16 +1241,25 @@ const localDate: string = new Date(
                       gap: "5px",
                     }}
                   >
-                    <a className="submit-btn" onClick={handleApprove}>
-                      Submit
+                     <a
+                      className={`submit-btn ${isSubmitting ? "disabled-btn" : ""}`}
+                      onClick={!isSubmitting ? handleApprove : undefined}
+                    >
+                      {isSubmitting ? "Processing..." : "Submit"}
                     </a>
 
-                    <a className="Rework-btn" onClick={handleSendBack}>
-                      send Back
+                    <a
+                      className={`Rework-btn ${isSubmitting ? "disabled-btn" : ""}`}
+                      onClick={!isSubmitting ? handleSendBack : undefined}
+                    >
+                      {isSubmitting ? "Processing..." : "Send Back"}
                     </a>
 
-                    <a className="Reject-btn" onClick={handleReject}>
-                      Reject
+                    <a
+                      className={`Reject-btn ${isSubmitting ? "disabled-btn" : ""}`}
+                      onClick={!isSubmitting ? handleReject : undefined}
+                    >
+                      {isSubmitting ? "Processing..." : "Reject"}
                     </a>
 
                     <a href="#" onClick={handleExit} className="reset-btn">

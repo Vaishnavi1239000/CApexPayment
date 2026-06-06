@@ -172,7 +172,7 @@ const getCapexData = async () => {
     // =========================
     if (activeMenu === "My Request") {
 
-      filterQuery = `CurrentApproverId eq ${currentUser.Id}`;
+     filterQuery = `Status eq 'Pending for Approver'`;
     }
 
     // =========================

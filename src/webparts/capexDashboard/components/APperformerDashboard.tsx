@@ -212,14 +212,20 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
       let filterQuery;
       // const currentUser = await sp.web.currentUser();
 
-      if (activeMenu === "My Request") {
-        filterQuery = `CurrentApproverId eq ${currentUser.Id} and Status eq 'Pending for PF Approver' or Status eq 'Pending for PF Approver UTR'`;
+     if (activeMenu === "My Request") {
+        filterQuery = `
+      (
+        Status eq 'Pending for PF Approver'
+        or Status eq 'Pending for PF Approver UTR'
+      )
+      and CurrentApprover/Id eq ${currentUser.Id}
+      `;
       } else if (activeMenu === "Paid") {
-        filterQuery = `CurrentApproverId eq ${currentUser.Id} and Status eq 'Paid'`;
+        filterQuery = `Status eq 'Paid'`;
       } else if (activeMenu === "Rejected") {
-        filterQuery = `CurrentApproverId eq ${currentUser.Id} and Status eq 'Rejected'`;
+        filterQuery = `Status eq 'Rejected'`;
       }
-      const items = await sp.web.lists
+       const items = await sp.web.lists
         .getByTitle("CapexPayment")
         .items.select(
           "*",
@@ -288,20 +294,17 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
 
   const paginatedData = filteredData.slice(startIndex, endIndex);
   React.useEffect(() => {
-    if (!context) return;
-    void getLoggedInUser();
-    void getCapexData();
-  }, [context]);
+  if (!context) return;
 
-  if (showForm && selectedItem) {
+  void getLoggedInUser();
+  void getCapexData();
 
+}, [context, activeMenu]);
+
+   if (showForm) {
     if (formType === "approve") {
       return (
-        <APperformerAdvanceform
-          context={context}
-          formData={selectedItem}
-          onClose={() => setShowForm(false)}
-        />
+        <APperformerAdvanceform context={context} itemId={selectedItem?.ID} />
       );
     }
 
@@ -309,25 +312,23 @@ const APperformerDashboard: React.FC<UserDashboardProps> = ({ context }) => {
       return (
         <APperformerAdvanceFormForUTR
           context={context}
-          formData={selectedItem}
-          onClose={() => setShowForm(false)}
+          itemId={selectedItem?.ID}
         />
       );
     }
-
-    if (formType === "view") {
-          return (
-            <ViewAdvanceForm
-              context={context}
-              formData={selectedItem}
-              onClose={() => {
-                setShowForm(false);
-                setFormType(null);
-                void getCapexData();
-              }}
-            />
-          );
-        }
+     if (formType === "view") {
+      return (
+        <ViewAdvanceForm
+          context={context}
+          formData={selectedItem}
+          onClose={() => {
+            setShowForm(false);
+            setFormType(null);
+            void getCapexData();
+          }}
+        />
+      );
+    }
   }
 
   return (
