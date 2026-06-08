@@ -88,7 +88,8 @@ const submitRef = useRef(false);
     setAttachments(updatedFiles);
   };
 
-  const getPreviousAdvances = async (vendorId: number) => {
+  const getPreviousAdvances = async (vendorId: string) => {
+    debugger;
     try {
        if (!vendorId) {
       setPreviousAdvances([]);
@@ -97,21 +98,21 @@ const submitRef = useRef(false);
       debugger;
       console.log("Fetching for Vendor:", vendorId);
 
-      const data = await sp.web.lists
-        .getByTitle("CapexPayment")
-        .items.select(
-          "PONumber",
-          "RequestAdvanceAmount",
-          "Created",
-          "VoucherDate",
 
-          "PaidAmount",
-          "Status",
-          "VendorCode/Id",
-        )
-        .expand("VendorCode")
-        .filter(`VendorCode/Id eq ${vendorId} and Status eq 'Paid'`)
-        .orderBy("Created", false)();
+
+     const data = await sp.web.lists
+  .getByTitle("CapexPayment")
+  .items
+  .select(
+    "PONumber",
+     "RequestedAmountforPayment",
+    "Created",
+    "VoucherDate",
+    "Status",
+    "VendorCode"
+  )
+  .filter(`VendorCode eq '${vendorId}' and Status eq 'Paid'`)
+  .orderBy("Created", false)();
 
       console.log("DATA:", data);
 
@@ -800,7 +801,7 @@ const uploadAttachments = async (capexId: string) => {
 
                       
                          if (id > 0) {
-                            void getPreviousAdvances(id);
+                            void getPreviousAdvances(vendor?.VendorCode);
                           } else {
                             // Clear table data
                             setPreviousAdvances([]);
@@ -975,7 +976,7 @@ const uploadAttachments = async (capexId: string) => {
                               <th className="px-4 py-2">Requested Date</th>
                               <th className="px-4 py-2">Paid Date</th>
                               <th className="px-4 py-2">MRN No</th>
-                              <th className="px-4 py-2">Settled Amount</th>
+                              {/* <th className="px-4 py-2">Settled Amount</th> */}
                               <th className="px-4 py-2">Pending Advance</th>
                             </tr>
                           </thead>
@@ -991,13 +992,13 @@ const uploadAttachments = async (capexId: string) => {
                                 (item: any, index: number) => {
                                   const pending = Math.max(
                                     0,
-                                    Number(item.RequestAdvanceAmount || 0) -
+                                    Number(item.RequestedAmountforPayment || 0) -
                                     Number(item.PaidAmount || 0),
                                   );
                                   return (
                                     <tr key={index}>
                                       <td>{item.PONumber}</td>
-                                      <td>{item.RequestAdvanceAmount}</td>
+                                      <td>{item.RequestedAmountforPayment}</td>
 
                                       <td>
                                         {item.Created
@@ -1016,7 +1017,7 @@ const uploadAttachments = async (capexId: string) => {
                                       </td>
 
                                       <td>{item.VoucherNumber}</td>
-                                      <td>{item.PaidAmount}</td>
+                                      {/* <td>{item.PaidAmount}</td> */}
                                       <td>{pending}</td>
                                     </tr>
                                   );

@@ -39,8 +39,8 @@ const localDate: string = new Date(
   
   const [selectedVendorName, setSelectedVendorName] = useState("");
   const [vendors, setVendors] = useState<IVendor[]>([]);
-  const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
-  
+ // const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [UTRDate, setUTRDate] = useState("");
   const [UTRNumber, setUTRNumber] = useState("");
   const [UTRRemarks, setUTRRemarks] = useState("");
@@ -82,30 +82,28 @@ const getLoggedInUser = async () => {
       console.log("Error fetching user:", error);
     }
   };
-  const getPreviousAdvances = async (vendorId: number) => {
+  const getPreviousAdvances = async (vendorId: string) => {
+    debugger;
     try {
+       
       debugger;
-       if (!vendorId) {
-      setPreviousAdvances([]);
-      return;
-    }
       console.log("Fetching for Vendor:", vendorId);
 
-      const data = await sp.web.lists
-        .getByTitle("CapexPayment")
-        .items.select(
-          "PONumber",
-          "RequestAdvanceAmount",
-          "Created",
-          "VoucherDate",
 
-          "PaidAmount",
-          "Status",
-          "VendorCode/Id",
-        )
-        .expand("VendorCode")
-        .filter(`VendorCode/Id eq ${vendorId} and Status eq 'Paid'`)
-        .orderBy("Created", false)();
+
+     const data = await sp.web.lists
+  .getByTitle("CapexPayment")
+  .items
+  .select(
+    "PONumber",
+     "RequestedAmountforPayment",
+    "Created",
+    "VoucherDate",
+    "Status",
+    "VendorCode"
+  )
+  .filter(`VendorCode eq '${vendorId}' and Status eq 'Paid'`)
+  .orderBy("Created", false)();
 
       console.log("DATA:", data);
 
@@ -115,6 +113,7 @@ const getLoggedInUser = async () => {
       void setPreviousAdvances([]);
     }
   };
+
   const getAttachments = async (capexId: string) => {
     try {
       const safe = capexId.replace(/\//g, "_");
@@ -192,11 +191,15 @@ const getLoggedInUser = async () => {
       setItemData(item);
       debugger;
 
-      const vendorId = item?.VendorCode?.Id || null;
+      const vendorId = item?.VendorCode || null;
 
       console.log("Vendor Id:", vendorId);
 
       setSelectedVendorId(vendorId);
+
+       if (vendorId) {
+      void getPreviousAdvances(vendorId);
+    }
 
       setSelectedVendorName(item?.VendorName || "");
 
@@ -690,6 +693,80 @@ useEffect(() => {
                       </ul>
                     )}
                   </div>
+                  <div className="heading1" style={{ marginTop: "10px" }}>
+                <label>Previous Advances</label>
+              </div>
+              <div className="main-formcontainer">
+                <div className="row mb-20">
+                  <div className="col-md-12">
+                    <div style={{ overflowX: "auto" }}>
+                      <div className="table-vert-scroll">
+                        <table className="custom-table min-w-full bg-white rounded-2xl shadow-md">
+                          <thead
+                            className="text-white"
+                            style={{ backgroundColor: "rgb(60, 62, 69)" }}
+                          >
+                            <tr>
+                              <th className="px-4 py-2">PO Number</th>
+                              <th className="px-4 py-2">Previous Advance</th>
+                              <th className="px-4 py-2">Requested Date</th>
+                              <th className="px-4 py-2">Paid Date</th>
+                              <th className="px-4 py-2">MRN No</th>
+                              {/* <th className="px-4 py-2">Settled Amount</th> */}
+                              <th className="px-4 py-2">Pending Advance</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {previousAdvances.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} style={{ textAlign: "center" }}>
+                                 No previous advances available
+                                </td>
+                              </tr>
+                            ) : (
+                              previousAdvances.map(
+                                (item: any, index: number) => {
+                                  const pending = Math.max(
+                                    0,
+                                    Number(item.RequestedAmountforPayment || 0) -
+                                    Number(item.PaidAmount || 0),
+                                  );
+                                  return (
+                                    <tr key={index}>
+                                      <td>{item.PONumber}</td>
+                                      <td>{item.RequestedAmountforPayment}</td>
+
+                                      <td>
+                                        {item.Created
+                                          ? new Date(
+                                            item.Created,
+                                          ).toLocaleDateString()
+                                          : ""}
+                                      </td>
+
+                                      <td>
+                                        {item.VoucherDate
+                                          ? new Date(
+                                            item.VoucherDate,
+                                          ).toLocaleDateString()
+                                          : ""}
+                                      </td>
+
+                                      <td>{item.VoucherNumber}</td>
+                                      {/* <td>{item.PaidAmount}</td> */}
+                                      <td>{pending}</td>
+                                    </tr>
+                                  );
+                                },
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
                   <div className="col-md-4">
                     <label className="font">UTR Date</label>
                     <input type="date" className="font-control" value={UTRDate}

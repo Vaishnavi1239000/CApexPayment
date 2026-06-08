@@ -2,7 +2,7 @@ import * as React from "react";
 import "./advanced.scss";
 import { spfi } from "@pnp/sp";
 import { SPFx } from "@pnp/sp/presets/all";
-import { useEffect, useState,useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   PeoplePicker,
   PrincipalType,
@@ -22,14 +22,16 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   // =========================
   // STATES
   // =========================
-   const today = new Date();
-   const submitRef = useRef(false);
-     const draftRef = useRef(false);
+  const today = new Date();
+
+  const [selectedVendorCode, setSelectedVendorCode] = useState("");
+  const submitRef = useRef(false);
+  const draftRef = useRef(false);
   const localDate: string = new Date(
-  today.getTime() - today.getTimezoneOffset() * 60000
-)
-  .toISOString()
-  .split("T")[0];
+    today.getTime() - today.getTimezoneOffset() * 60000,
+  )
+    .toISOString()
+    .split("T")[0];
 
   const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
   const [vendors, setVendors] = useState<IVendor[]>([]);
@@ -49,7 +51,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   const [finalPayment, setFinalPayment] = useState("");
   const [installationDetails, setInstallationDetails] = useState("");
 
-  const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
   const [selectedVendorName, setSelectedVendorName] = useState("");
 
   const [poNumber, setPoNumber] = useState("");
@@ -71,9 +73,9 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   // =========================
   // LOAD DATA
   // =========================
-  const getPreviousAdvances = async (vendorId: number) => {
+  const getPreviousAdvances = async (vendorId: string) => {
+    debugger;
     try {
-
        if (!vendorId) {
       setPreviousAdvances([]);
       return;
@@ -81,21 +83,21 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       debugger;
       console.log("Fetching for Vendor:", vendorId);
 
-      const data = await sp.web.lists
-        .getByTitle("CapexPayment")
-        .items.select(
-          "PONumber",
-          "RequestAdvanceAmount",
-          "Created",
-          "VoucherDate",
 
-          "PaidAmount",
-          "Status",
-          "VendorCode/Id",
-        )
-        .expand("VendorCode")
-        .filter(`VendorCode/Id eq ${vendorId} and Status eq 'Paid'`)
-        .orderBy("Created", false)();
+
+     const data = await sp.web.lists
+  .getByTitle("CapexPayment")
+  .items
+  .select(
+    "PONumber",
+     "RequestedAmountforPayment",
+    "Created",
+    "VoucherDate",
+    "Status",
+    "VendorCode"
+  )
+  .filter(`VendorCode eq '${vendorId}' and Status eq 'Paid'`)
+  .orderBy("Created", false)();
 
       console.log("DATA:", data);
 
@@ -105,6 +107,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       void setPreviousAdvances([]);
     }
   };
+
   const handleNumberChange = (value: string, setter: any) => {
     // Allow only numbers and decimal (max one dot)
     const regex = /^\d*\.?\d*$/;
@@ -114,18 +117,16 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     }
   };
   const getVendors = async () => {
-  try {
-    const data = await sp.web.lists
-      .getByTitle("VendorMaster")
-      .items.select("Id", "VendorCode", "VendorName", "Status")
-      .filter("Status eq 'Active'")()
-;
-
-    setVendors(data);
-  } catch (error) {
-    console.error("Vendor fetch error:", error);
-  }
-};
+    try {
+      const data = await sp.web.lists
+        .getByTitle("VendorMaster")
+        .items.select("Id", "VendorCode", "VendorName", "Status")
+        .filter("Status eq 'Active'")();
+      setVendors(data);
+    } catch (error) {
+      console.error("Vendor fetch error:", error);
+    }
+  };
 
   const getLoggedInUser = async () => {
     try {
@@ -211,7 +212,6 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     if (isDraftSaving) return;
 
     setIsDraftSaving(true);
-    
 
     try {
       debugger;
@@ -425,7 +425,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   const validateForm = () => {
     const errors: string[] = [];
 
-    if (!selectedVendorId || selectedVendorId === 0) {
+    if (!selectedVendorId || selectedVendorId === "") {
       errors.push("Please select Vendor");
     }
 
@@ -436,7 +436,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     if (!poDate || poDate === "Invalid Date") {
       errors.push("Please select PO Date");
     }
- if (poDate > localDate) {
+    if (poDate > localDate) {
       errors.push("PO date cannot be a future date");
       // return;
     }
@@ -444,7 +444,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       errors.push("Please enter PO Terms");
     }
 
-    if (!poAmount || poAmount.trim() === "" ) {
+    if (!poAmount || poAmount.trim() === "") {
       errors.push("Please enter PO Amount");
     }
 
@@ -456,7 +456,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     if (!mrnDate || mrnDate === "Invalid Date") {
       errors.push("Please select MRN Date");
     }
-     if (mrnDate > localDate) {
+    if (mrnDate > localDate) {
       errors.push("MRN date cannot be a future date");
       // return;
     }
@@ -504,10 +504,10 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   // UPDATE
   // =========================
   const handleSubmit = async () => {
-   if (submitRef.current) return;
+    if (submitRef.current) return;
 
-  //submitRef.current = true;
-  setIsSubmitting(true);
+    //submitRef.current = true;
+    setIsSubmitting(true);
 
     try {
       const errors = validateForm();
@@ -516,14 +516,14 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         return;
       }
 
-//       const email = selectedUser?.[0]?.mail || selectedUser?.[0]?.secondaryText;
+      //       const email = selectedUser?.[0]?.mail || selectedUser?.[0]?.secondaryText;
 
-// if (!email) {
-//   alert("Invalid user selected");
-//   return;
-// }
+      // if (!email) {
+      //   alert("Invalid user selected");
+      //   return;
+      // }
 
-// const ensuredUser = await sp.web.ensureUser(email);
+      // const ensuredUser = await sp.web.ensureUser(email);
       // 🔥 preserve matrix (no reset)
       const existingFlow = formData.ApprovalMatrix
         ? JSON.parse(formData.ApprovalMatrix)
@@ -547,58 +547,57 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
         .getByTitle("CapexPayment")
         .items.getById(formData.ID)
         .update({
-     
-        Title: formData.CapexId,
-        CapexId: formData.CapexId,
+          Title: formData.CapexId,
+          CapexId: formData.CapexId,
 
-        // Employee
-        EmployeeCode: employee.EmployeeCode,
-        EmployeeName: employee.EmployeeName,
-        Division: employee.Division,
-        Location: employee.Location,
-        Email: employee.EmployeeEmail,
-        RM: employee.ReportingManager?.Title,
-        HOD: employee.HOD?.Title,
-        ContactNo: employee.ContactNo,
-        EmployeeStatus: employee.EmployeeStatus,
+          // Employee
+          EmployeeCode: employee.EmployeeCode,
+          EmployeeName: employee.EmployeeName,
+          Division: employee.Division,
+          Location: employee.Location,
+          Email: employee.EmployeeEmail,
+          RM: employee.ReportingManager?.Title,
+          HOD: employee.HOD?.Title,
+          ContactNo: employee.ContactNo,
+          EmployeeStatus: employee.EmployeeStatus,
 
-        // Vendor
-        VendorCode: selectedVendorId ? selectedVendorId.toString() : "",
+          // Vendor
+          VendorCode: selectedVendorId ? selectedVendorId.toString() : "",
 
-        VendorName: selectedVendorName,
+          VendorName: selectedVendorName,
 
-        // PO
-        PONumber: poNumber,
-        PODate: poDate ? new Date(poDate) : null,
-        POPaymentTerms: poTerms,
-        POAmount: poAmount ? poAmount.toString() : "",
+          // PO
+          PONumber: poNumber,
+          PODate: poDate ? new Date(poDate) : null,
+          POPaymentTerms: poTerms,
+          POAmount: poAmount ? poAmount.toString() : "",
 
-        // 🔥 NEW MRN FIELDS
-        MRNNumber: mrnNumber,
-        MRNDtae: mrnDate ? new Date(mrnDate) : null,
+          // 🔥 NEW MRN FIELDS
+          MRNNumber: mrnNumber,
+          MRNDtae: mrnDate ? new Date(mrnDate) : null,
 
-        MRNAmountwithGST: mrnAmount?.toString(),
-        RequestedAmountforPayment: requestedAmount
-          ? requestedAmount.toString()
-          : "",
+          MRNAmountwithGST: mrnAmount?.toString(),
+          RequestedAmountforPayment: requestedAmount
+            ? requestedAmount.toString()
+            : "",
 
-        // 🔥 FINAL PAYMENT
-        FinalPaymentAgainstPO: finalPayment,
+          // 🔥 FINAL PAYMENT
+          FinalPaymentAgainstPO: finalPayment,
 
-        InstallationDetails: installationDetails,
+          InstallationDetails: installationDetails,
 
-        // Advance
-        // RequestAdvanceAmount: advanceAmount,
-        // PaidAmount: paidAmount,
+          // Advance
+          // RequestAdvanceAmount: advanceAmount,
+          // PaidAmount: paidAmount,
 
-        // PIC
+          // PIC
 
-        StatusFlow: "Pending for Approver",
-        Status: "Pending for Approver",
-        ApprovalMatrix: JSON.stringify(existingFlow),
-        CurrentApproverId: currentApproverId,
-        WorkflowHistory: JSON.stringify(history),
-      });
+          StatusFlow: "Pending for Approver",
+          Status: "Pending for Approver",
+          ApprovalMatrix: JSON.stringify(existingFlow),
+          CurrentApproverId: currentApproverId,
+          WorkflowHistory: JSON.stringify(history),
+        });
 
       if (selectedFiles.length > 0) {
         await uploadFiles();
@@ -614,7 +613,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
       alert(error?.data?.responseBody || "Error while saving ❌");
     } finally {
       submitRef.current = false;
-    
+
       setIsSubmitting(false);
     }
   };
@@ -633,8 +632,13 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
     setPoAmount(formData.POAmount || "");
 
     setVendorName(formData.VendorName || "");
-    setSelectedVendorId(formData.VendorCode || null); // ✅ ADD THIS
+    //setSelectedVendorId(formData.VendorCode || ""); // ✅ ADD THIS
     setSelectedVendorName(formData.VendorName || ""); // ✅ ADD THIS
+
+     setSelectedVendorId(formData.VendorCode || ""); // ✅ ADD THIS
+    if (formData.VendorCode) {
+      void getPreviousAdvances(formData.VendorCode);
+    }
     setMrnNumber(formData.MRNNumber || "");
     setMrnDate(formData.MRNDtae?.split("T")[0] || "");
     setMrnAmount(formData.MRNAmountwithGST || "");
@@ -642,7 +646,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
 
     // ✅ Boolean → Yes/No
     setFinalPayment(formData.FinalPaymentAgainstPO ? "Yes" : "No");
- 
+
     setInstallationDetails(formData.InstallationDetails || "");
 
     // setApproverRemarks(formData.ApproverRemarks || "");
@@ -698,6 +702,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
   }, [formData]);
 
   useEffect(() => {
+    debugger
     void getLoggedInUser();
     void getVendors();
     debugger;
@@ -719,10 +724,10 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
               <img src={logo} />
               <h1>Edit Advance Payment </h1>
             </div>
-             <li className={`approval-step`}>
-                      {`Initiator`} - {employee.EmployeeName}
-                    </li>
-           {approvalMatrix.map((a, index) => (
+            <li className={`approval-step`}>
+              {`Initiator`} - {employee.EmployeeName}
+            </li>
+            {approvalMatrix.map((a, index) => (
               <li
                 key={index}
                 className={`approval-step ${
@@ -828,22 +833,21 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                   <div className="col-md-4">
                     <label className="font">Vendor Code</label>
                     <span className="required">*</span>
-                   <select
+                    <select
                       value={selectedVendorId || ""}
                       onChange={(e) => {
                         const id = Number(e.target.value);
                         const vendor = vendors.find((v) => v.Id === id);
 
-                        setSelectedVendorId(id);
+                       // setSelectedVendorId(id);
                         setSelectedVendorName(vendor?.VendorName || "");
-
+                        setSelectedVendorCode(vendor?.VendorCode || "");
                         if (id > 0) {
-                            void getPreviousAdvances(id);
-                          } else {
-                            // Clear table data
-                            setPreviousAdvances([]);
-                          }
-                       
+                          void getPreviousAdvances(vendor?.VendorCode || "");
+                        } else {
+                          // Clear table data
+                          setPreviousAdvances([]);
+                        }
                       }}
                       className="formtext-control"
                     >
@@ -854,7 +858,6 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                         </option>
                       ))}
                     </select>
-                    
 
                     {/* <select
                       value={selectedVendorId || ""}
@@ -899,7 +902,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                     <input
                       type="date"
                       value={poDate}
-                       max={new Date().toISOString().split("T")[0]}
+                      max={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setPoDate(e.target.value)}
                       className="form-control"
                     />
@@ -949,7 +952,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                     <input
                       type="date"
                       value={mrnDate}
-                       max={new Date().toISOString().split("T")[0]}
+                      max={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setMrnDate(e.target.value)}
                       className="form-control"
                     />
@@ -1043,7 +1046,7 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                             {previousAdvances.length === 0 ? (
                               <tr>
                                 <td colSpan={7} style={{ textAlign: "center" }}>
-                                 No previous advances available
+                                  No previous advances available
                                 </td>
                               </tr>
                             ) : (
@@ -1092,11 +1095,10 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
               </div>
               <div className="heading1" style={{ marginTop: "10px" }}>
                 <label>Upload Document</label>
-                
               </div>
               <div className="main-formcontainer">
                 <div className="row mb-20">
-                   <div className="col-md-4">
+                  <div className="col-md-4">
                     <label className="font">
                       Attachments
                       <span className="required" style={{ color: "red" }}>
@@ -1126,7 +1128,6 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                               {file.Name}
                             </a>
 
-                           
                             <button
                               type="button"
                               className="btn btn-sm btn-danger"
@@ -1139,7 +1140,6 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                       </ul>
                     )}
 
-                    
                     {selectedFiles.length > 0 && (
                       <ul className="mt-2">
                         {selectedFiles.map((file: File, index: number) => (
@@ -1152,8 +1152,8 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                               marginBottom: "5px",
                             }}
                           >
-                             <a
-                            href={URL.createObjectURL(file)}
+                            <a
+                              href={URL.createObjectURL(file)}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -1161,7 +1161,6 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                             </a>
                             {/* <span>{file.name}</span> */}
 
-                          
                             <button
                               type="button"
                               className="btn btn-sm btn-danger"
@@ -1203,8 +1202,6 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                       <p>No history available</p>
                     ) : (
                       <div className="workflow-history">
-                        
-
                         <table
                           className="workflow-table"
                           style={{ width: "100%" }}
@@ -1230,7 +1227,8 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                               .filter(
                                 (h: any) =>
                                   h.ActionTaken &&
-                                  h.ActionTaken !== "Draft Saved" && h.ActionTaken !== "Edited",
+                                  h.ActionTaken !== "Draft Saved" &&
+                                  h.ActionTaken !== "Edited",
                               )
                               .map((h: any, idx: number) => (
                                 <tr key={idx}>
@@ -1257,7 +1255,6 @@ const EditAdvanceForm = ({ context, formData, onClose }: any) => {
                               ))}
                           </tbody>
                         </table>
-                       
                       </div>
                     )}
                   </div>

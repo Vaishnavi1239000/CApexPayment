@@ -42,7 +42,8 @@ const actionLock = React.useRef(false);
   const [previousAdvances, setPreviousAdvances] = useState<any[]>([]);
   const [finalPayment, setFinalPayment] = useState("");
   const [installationDetails, setInstallationDetails] = useState("");
-  const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
+ // const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [approvalMatrix, setApprovalMatrix] = useState<any[]>([]);
   const [workflowHistory, setWorkflowHistory] = useState<any[]>([]);
   const peoplePickerContext: IPeoplePickerContext = {
@@ -50,30 +51,31 @@ const actionLock = React.useRef(false);
     msGraphClientFactory: context.msGraphClientFactory,
     spHttpClient: context.spHttpClient,
   };
-  const getPreviousAdvances = async (vendorId: number) => {
+  const getPreviousAdvances = async (vendorId: string) => {
+    debugger;
     try {
+       if (!vendorId) {
+      setPreviousAdvances([]);
+      return;
+    }
       debugger;
-      if (!vendorId) {
-        setPreviousAdvances([]);
-        return;
-      }
       console.log("Fetching for Vendor:", vendorId);
 
-      const data = await sp.web.lists
-        .getByTitle("CapexPayment")
-        .items.select(
-          "PONumber",
-          "RequestAdvanceAmount",
-          "Created",
-          "VoucherDate",
 
-          "PaidAmount",
-          "Status",
-          "VendorCode/Id",
-        )
-        .expand("VendorCode")
-        .filter(`VendorCode/Id eq ${vendorId} and Status eq 'Paid'`)
-        .orderBy("Created", false)();
+
+     const data = await sp.web.lists
+  .getByTitle("CapexPayment")
+  .items
+  .select(
+    "PONumber",
+     "RequestedAmountforPayment",
+    "Created",
+    "VoucherDate",
+    "Status",
+    "VendorCode"
+  )
+  .filter(`VendorCode eq '${vendorId}' and Status eq 'Paid'`)
+  .orderBy("Created", false)();
 
       console.log("DATA:", data);
 
@@ -83,6 +85,7 @@ const actionLock = React.useRef(false);
       void setPreviousAdvances([]);
     }
   };
+
 
   const buildApprovalPreview = async (employee: any) => {
     const flow: any[] = [];
@@ -291,10 +294,12 @@ const actionLock = React.useRef(false);
       setItemData(item);
       debugger;
 
-      const vendorId = item?.VendorCode?.Id || null;
+      const vendorId = item?.VendorCode || "";
 
       console.log("Vendor Id:", vendorId);
-
+ if (vendorId) {
+      void getPreviousAdvances(vendorId);
+    }
       setSelectedVendorId(vendorId);
 
       setSelectedVendorName(item?.VendorName || "");
@@ -1098,6 +1103,80 @@ setIsProcessing(false);
                         ))}
                       </ul>
                     )}
+                  </div>
+                </div>
+              </div>
+              <div className="heading1" style={{ marginTop: "10px" }}>
+                <label>Previous Advances</label>
+              </div>
+              <div className="main-formcontainer">
+                <div className="row mb-20">
+                  <div className="col-md-12">
+                    <div style={{ overflowX: "auto" }}>
+                      <div className="table-vert-scroll">
+                        <table className="custom-table min-w-full bg-white rounded-2xl shadow-md">
+                          <thead
+                            className="text-white"
+                            style={{ backgroundColor: "rgb(60, 62, 69)" }}
+                          >
+                            <tr>
+                              <th className="px-4 py-2">PO Number</th>
+                              <th className="px-4 py-2">Previous Advance</th>
+                              <th className="px-4 py-2">Requested Date</th>
+                              <th className="px-4 py-2">Paid Date</th>
+                              <th className="px-4 py-2">MRN No</th>
+                              {/* <th className="px-4 py-2">Settled Amount</th> */}
+                              <th className="px-4 py-2">Pending Advance</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {previousAdvances.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} style={{ textAlign: "center" }}>
+                                 No previous advances available
+                                </td>
+                              </tr>
+                            ) : (
+                              previousAdvances.map(
+                                (item: any, index: number) => {
+                                  const pending = Math.max(
+                                    0,
+                                    Number(item.RequestedAmountforPayment || 0) -
+                                    Number(item.PaidAmount || 0),
+                                  );
+                                  return (
+                                    <tr key={index}>
+                                      <td>{item.PONumber}</td>
+                                      <td>{item.RequestedAmountforPayment}</td>
+
+                                      <td>
+                                        {item.Created
+                                          ? new Date(
+                                            item.Created,
+                                          ).toLocaleDateString()
+                                          : ""}
+                                      </td>
+
+                                      <td>
+                                        {item.VoucherDate
+                                          ? new Date(
+                                            item.VoucherDate,
+                                          ).toLocaleDateString()
+                                          : ""}
+                                      </td>
+
+                                      <td>{item.VoucherNumber}</td>
+                                      {/* <td>{item.PaidAmount}</td> */}
+                                      <td>{pending}</td>
+                                    </tr>
+                                  );
+                                },
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
